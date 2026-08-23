@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as EntryRouteImport } from './routes/entry'
+import { Route as LedgerRouteImport } from './routes/ledger'
 import { Route as LogRouteImport } from './routes/log'
 import { Route as UnlockRouteImport } from './routes/unlock'
 
@@ -22,6 +23,11 @@ const IndexRoute = IndexRouteImport.update({
 const EntryRoute = EntryRouteImport.update({
   id: '/entry',
   path: '/entry',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LedgerRoute = LedgerRouteImport.update({
+  id: '/ledger',
+  path: '/ledger',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LogRoute = LogRouteImport.update({
@@ -38,12 +44,14 @@ const UnlockRoute = UnlockRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/entry': typeof EntryRoute
+  '/ledger': typeof LedgerRoute
   '/log': typeof LogRoute
   '/unlock': typeof UnlockRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/entry': typeof EntryRoute
+  '/ledger': typeof LedgerRoute
   '/log': typeof LogRoute
   '/unlock': typeof UnlockRoute
 }
@@ -51,20 +59,22 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/entry': typeof EntryRoute
+  '/ledger': typeof LedgerRoute
   '/log': typeof LogRoute
   '/unlock': typeof UnlockRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/entry' | '/log' | '/unlock'
+  fullPaths: '/' | '/entry' | '/ledger' | '/log' | '/unlock'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/entry' | '/log' | '/unlock'
-  id: '__root__' | '/' | '/entry' | '/log' | '/unlock'
+  to: '/' | '/entry' | '/ledger' | '/log' | '/unlock'
+  id: '__root__' | '/' | '/entry' | '/ledger' | '/log' | '/unlock'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   EntryRoute: typeof EntryRoute
+  LedgerRoute: typeof LedgerRoute
   LogRoute: typeof LogRoute
   UnlockRoute: typeof UnlockRoute
 }
@@ -83,6 +93,13 @@ declare module '@tanstack/react-router' {
       path: '/entry'
       fullPath: '/entry'
       preLoaderRoute: typeof EntryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ledger': {
+      id: '/ledger'
+      path: '/ledger'
+      fullPath: '/ledger'
+      preLoaderRoute: typeof LedgerRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/log': {
@@ -105,6 +122,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   EntryRoute: EntryRoute,
+  LedgerRoute: LedgerRoute,
   LogRoute: LogRoute,
   UnlockRoute: UnlockRoute,
 }
