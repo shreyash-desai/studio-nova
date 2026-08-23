@@ -38,7 +38,7 @@ export const getMasters = createServerFn({ method: "GET" }).handler(async () => 
   ]);
   return {
     products: products.data ?? [],
-    materials: materials.data ?? [],
+    materials: (materials.data ?? []).map((m) => ({ ...m, unit: m.default_unit })),
     channels: channels.data ?? [],
     customers: customers.data ?? [],
     operators: operators.data ?? [],
