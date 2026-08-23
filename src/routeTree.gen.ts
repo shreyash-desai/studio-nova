@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as EntryRouteImport } from './routes/entry'
+import { Route as LogRouteImport } from './routes/log'
 import { Route as UnlockRouteImport } from './routes/unlock'
 
 const IndexRoute = IndexRouteImport.update({
@@ -23,6 +24,11 @@ const EntryRoute = EntryRouteImport.update({
   path: '/entry',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LogRoute = LogRouteImport.update({
+  id: '/log',
+  path: '/log',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const UnlockRoute = UnlockRouteImport.update({
   id: '/unlock',
   path: '/unlock',
@@ -32,30 +38,34 @@ const UnlockRoute = UnlockRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/entry': typeof EntryRoute
+  '/log': typeof LogRoute
   '/unlock': typeof UnlockRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/entry': typeof EntryRoute
+  '/log': typeof LogRoute
   '/unlock': typeof UnlockRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/entry': typeof EntryRoute
+  '/log': typeof LogRoute
   '/unlock': typeof UnlockRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/entry' | '/unlock'
+  fullPaths: '/' | '/entry' | '/log' | '/unlock'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/entry' | '/unlock'
-  id: '__root__' | '/' | '/entry' | '/unlock'
+  to: '/' | '/entry' | '/log' | '/unlock'
+  id: '__root__' | '/' | '/entry' | '/log' | '/unlock'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   EntryRoute: typeof EntryRoute
+  LogRoute: typeof LogRoute
   UnlockRoute: typeof UnlockRoute
 }
 
@@ -75,6 +85,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EntryRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/log': {
+      id: '/log'
+      path: '/log'
+      fullPath: '/log'
+      preLoaderRoute: typeof LogRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/unlock': {
       id: '/unlock'
       path: '/unlock'
@@ -88,6 +105,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   EntryRoute: EntryRoute,
+  LogRoute: LogRoute,
   UnlockRoute: UnlockRoute,
 }
 export const routeTree = rootRouteImport
