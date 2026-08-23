@@ -73,7 +73,7 @@ export const createEntry = createServerFn({ method: "POST" })
     };
     const { data: inserted, error } = await client
       .from("transactions")
-      .insert(row)
+      .insert(row as never)
       .select("id, ref")
       .single();
     if (error) throw new Error(error.message);
@@ -92,7 +92,7 @@ export const updateEntry = createServerFn({ method: "POST" })
     if (data.qty !== undefined) patch["qty"] = Number(data.qty);
     if (data.notes !== undefined) patch["notes"] = data.notes || null;
     if (data.order_number !== undefined) patch["order_number"] = data.order_number || null;
-    const { error } = await client.from("transactions").update(patch).eq("id", data.id);
+    const { error } = await client.from("transactions").update(patch as never).eq("id", data.id);
     if (error) throw new Error(error.message);
     await logAudit("update", "transaction", data.id, patch);
     return { ok: true as const };

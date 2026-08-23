@@ -18,8 +18,8 @@ export function Stat({
 }: {
   label: string;
   value: ReactNode;
-  hint?: string;
-  accent?: string;
+  hint?: string | undefined;
+  accent?: string | undefined;
 }) {
   return (
     <div className="panel p-4">

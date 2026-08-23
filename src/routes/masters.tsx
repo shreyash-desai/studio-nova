@@ -54,7 +54,7 @@ function Masters() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  const rows = (masters as Record<string, Row[]>)[tab] ?? [];
+  const rows = (masters as unknown as Record<string, Row[]>)[tab] ?? [];
 
   async function onAdd(e: React.FormEvent) {
     e.preventDefault();
@@ -111,7 +111,7 @@ function Masters() {
                 : "border-input text-muted-foreground hover:bg-secondary"
             }`}
           >
-            {t.label} <span className="opacity-60">{((masters as Record<string, Row[]>)[t.key] ?? []).length}</span>
+            {t.label} <span className="opacity-60">{((masters as unknown as Record<string, Row[]>)[t.key] ?? []).length}</span>
           </button>
         ))}
       </div>

@@ -45,7 +45,7 @@ export async function logAudit(
   detail: Record<string, unknown>,
 ) {
   const client = await db();
-  await client.from("audit_log").insert({ action, entity, entity_id: entityId, detail });
+  await client.from("audit_log").insert({ action, entity, entity_id: entityId, detail: detail as never });
 }
 
 export function todayISO() {

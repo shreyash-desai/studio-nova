@@ -6,7 +6,7 @@ import { AppShell } from "@/components/AppShell";
 import { TxnTable } from "@/components/ledger-ui";
 import { fmtDayLong, todayISO, type TxnRow } from "@/lib/txn";
 
-type Search = { date?: string };
+type Search = { date?: string | undefined };
 
 export const Route = createFileRoute("/log")({
   head: () => ({
