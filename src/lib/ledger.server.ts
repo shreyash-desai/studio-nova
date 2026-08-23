@@ -25,19 +25,18 @@ function pad(n: number) {
 
 export async function nextRef(prefix: "TXN" | "REV") {
   const client = await db();
-  const seq = prefix === "TXN" ? "txn_seq" : "rev_seq";
-  const { data, error } = await client.rpc("nextval_public" as never, { seq_name: seq } as never);
-  if (!error && typeof data === "number") {
-    return `${prefix}-${new Date().getUTCFullYear()}-${pad(data)}`;
-  }
-  // Fallback: count-based reference.
-  const client2 = await db();
-  const { count } = await client2
+  const year = new Date().getUTCFullYear();
+  const { data } = await client
     .from("transactions")
-    .select("id", { count: "exact", head: true })
-    .like("ref", `${prefix}-%`);
-  return `${prefix}-${new Date().getUTCFullYear()}-${pad((count ?? 0) + 1)}`;
+    .select("ref")
+    .like("ref", `${prefix}-%`)
+    .order("ref", { ascending: false })
+    .limit(1);
+  const last = data?.[0]?.ref;
+  const n = last ? Number(last.split("-").pop()) + 1 : 1;
+  return `${prefix}-${year}-${pad(Number.isFinite(n) ? n : 1)}`;
 }
+
 
 export async function logAudit(
   action: string,
