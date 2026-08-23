@@ -36,7 +36,7 @@ export const Route = createFileRoute("/ledger")({
   errorComponent: ({ error }) => (
     <div className="px-5 py-24 text-center text-sm text-muted-foreground">{error.message}</div>
   ),
-  component: Ledger;
+  component: Ledger,
 });
 
 function Ledger() {
