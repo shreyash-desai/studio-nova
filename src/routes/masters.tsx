@@ -1,3 +1,4 @@
+import { gatedLoad } from "@/lib/gated";
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
@@ -19,7 +20,7 @@ export const Route = createFileRoute("/masters")({
       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
-  loader: () => getMasters(),
+  loader: () => gatedLoad(getMasters()),
   errorComponent: ({ error }) => (
     <div className="px-5 py-24 text-center text-sm text-muted-foreground">{error.message}</div>
   ),

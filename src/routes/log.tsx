@@ -1,3 +1,4 @@
+import { gatedLoad } from "@/lib/gated";
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
@@ -26,7 +27,8 @@ export const Route = createFileRoute("/log")({
     date: typeof search["date"] === "string" ? search["date"] : undefined,
   }),
   loaderDeps: ({ search }) => ({ date: search.date ?? todayISO() }),
-  loader: ({ deps }) => getDayLog({ data: { date: deps.date, month: deps.date.slice(0, 7) } }),
+  loader: ({ deps }) =>
+    gatedLoad(getDayLog({ data: { date: deps.date, month: deps.date.slice(0, 7) } })),
   errorComponent: ({ error }) => (
     <div className="px-5 py-24 text-center text-sm text-muted-foreground">{error.message}</div>
   ),

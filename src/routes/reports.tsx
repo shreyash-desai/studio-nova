@@ -1,3 +1,4 @@
+import { gatedLoad } from "@/lib/gated";
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useMemo } from "react";
 import { getLedger } from "@/lib/api.functions";
@@ -28,7 +29,7 @@ export const Route = createFileRoute("/reports")({
     end: typeof s["end"] === "string" ? s["end"] : undefined,
   }),
   loaderDeps: ({ search }) => ({ start: search.start ?? monthStart(), end: search.end ?? todayISO() }),
-  loader: ({ deps }) => getLedger({ data: deps }),
+  loader: ({ deps }) => gatedLoad(getLedger({ data: deps })),
   errorComponent: ({ error }) => (
     <div className="px-5 py-24 text-center text-sm text-muted-foreground">{error.message}</div>
   ),

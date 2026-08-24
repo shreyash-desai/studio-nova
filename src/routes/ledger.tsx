@@ -1,3 +1,4 @@
+import { gatedLoad } from "@/lib/gated";
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
@@ -32,7 +33,7 @@ export const Route = createFileRoute("/ledger")({
     start: search.start ?? monthStart(),
     end: search.end ?? todayISO(),
   }),
-  loader: ({ deps }) => getLedger({ data: deps }),
+  loader: ({ deps }) => gatedLoad(getLedger({ data: deps })),
   errorComponent: ({ error }) => (
     <div className="px-5 py-24 text-center text-sm text-muted-foreground">{error.message}</div>
   ),

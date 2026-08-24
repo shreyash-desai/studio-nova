@@ -1,5 +1,5 @@
 import { useSession } from "@tanstack/react-start/server";
-import { redirect } from "@tanstack/react-router";
+import { LOCKED } from "./gated";
 import { createHash, timingSafeEqual } from "node:crypto";
 
 export type GateSession = { unlocked?: boolean };
@@ -30,7 +30,7 @@ export function passwordMatches(input: string, expected: string): boolean {
 
 export async function requireUnlocked() {
   const session = await getGateSession();
-  if (!session.data.unlocked) throw redirect({ to: "/unlock" });
+  if (!session.data.unlocked) throw new Error(LOCKED);
   return session;
 }
 
