@@ -12,7 +12,10 @@ function sessionConfig() {
     cookie: {
       httpOnly: true,
       secure: true,
-      sameSite: "lax" as const,
+      // The Lovable preview runs the app inside a cross-site iframe. `lax`
+      // cookies are dropped there, so the successful unlock disappeared as
+      // soon as the browser loaded the dashboard.
+      sameSite: "none" as const,
       path: "/",
     },
   };
