@@ -1,6 +1,6 @@
-import { createFileRoute, useRouter } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { unlockSite } from "@/lib/api.functions";
 
 export const Route = createFileRoute("/unlock")({
@@ -18,10 +18,14 @@ export const Route = createFileRoute("/unlock")({
 });
 
 function Unlock() {
-  const router = useRouter();
   const unlock = useServerFn(unlockSite);
   const [error, setError] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [ready, setReady] = useState(false);
+
+  // Never let the browser submit this form natively (it would put the passcode
+  // in the URL); only enable it once React has hydrated.
+  useEffect(() => setReady(true), []);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -30,8 +34,11 @@ function Unlock() {
     const password = String(new FormData(e.currentTarget).get("password") ?? "");
     const { ok } = await unlock({ data: { password } });
     setBusy(false);
-    if (ok) await router.navigate({ to: "/" });
-    else setError(true);
+    if (ok) {
+      window.location.href = "/";
+      return;
+    }
+    setError(true);
   }
 
   return (
@@ -69,10 +76,10 @@ function Unlock() {
           ) : null}
           <button
             type="submit"
-            disabled={busy}
+            disabled={busy || !ready}
             className="mt-4 w-full rounded bg-foreground px-4 py-2.5 text-sm font-semibold text-background transition-opacity hover:opacity-90 disabled:opacity-50"
           >
-            {busy ? "Checking…" : "Enter"}
+            {!ready ? "Loading…" : busy ? "Checking…" : "Enter"}
           </button>
         </form>
       </div>
