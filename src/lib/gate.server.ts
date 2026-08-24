@@ -16,6 +16,7 @@ function sessionConfig() {
       // cookies are dropped there, so the successful unlock disappeared as
       // soon as the browser loaded the dashboard.
       sameSite: "none" as const,
+      partitioned: true,
       path: "/",
     },
   };
