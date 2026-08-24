@@ -1,4 +1,4 @@
-import { createFileRoute, useRouter } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { unlockSite } from "@/lib/api.functions";
@@ -18,7 +18,6 @@ export const Route = createFileRoute("/unlock")({
 });
 
 function Unlock() {
-  const router = useRouter();
   const unlock = useServerFn(unlockSite);
   const [error, setError] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -30,8 +29,11 @@ function Unlock() {
     const password = String(new FormData(e.currentTarget).get("password") ?? "");
     const { ok } = await unlock({ data: { password } });
     setBusy(false);
-    if (ok) await router.navigate({ to: "/" });
-    else setError(true);
+    if (ok) {
+      window.location.href = "/";
+      return;
+    }
+    setError(true);
   }
 
   return (
