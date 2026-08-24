@@ -1,3 +1,4 @@
+import { gatedLoad } from "@/lib/gated";
 import { createFileRoute } from "@tanstack/react-router";
 import { getAuditLog } from "@/lib/api.functions";
 import { AppShell } from "@/components/AppShell";
@@ -17,7 +18,7 @@ export const Route = createFileRoute("/audit")({
       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
-  loader: () => getAuditLog(),
+  loader: () => gatedLoad(getAuditLog()),
   errorComponent: ({ error }) => (
     <div className="px-5 py-24 text-center text-sm text-muted-foreground">{error.message}</div>
   ),

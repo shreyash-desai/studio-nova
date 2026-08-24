@@ -1,3 +1,4 @@
+import { gatedLoad } from "@/lib/gated";
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { searchLedger } from "@/lib/api.functions";
 import { AppShell } from "@/components/AppShell";
@@ -22,7 +23,7 @@ export const Route = createFileRoute("/search")({
     q: typeof s["q"] === "string" ? s["q"] : undefined,
   }),
   loaderDeps: ({ search }) => ({ q: search.q ?? "" }),
-  loader: ({ deps }) => searchLedger({ data: { q: deps.q } }),
+  loader: ({ deps }) => gatedLoad(searchLedger({ data: { q: deps.q } })),
   errorComponent: ({ error }) => (
     <div className="px-5 py-24 text-center text-sm text-muted-foreground">{error.message}</div>
   ),

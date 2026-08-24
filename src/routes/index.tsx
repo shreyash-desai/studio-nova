@@ -1,3 +1,4 @@
+import { gatedLoad } from "@/lib/gated";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { getDashboard } from "@/lib/api.functions";
 import { AppShell } from "@/components/AppShell";
@@ -20,7 +21,7 @@ export const Route = createFileRoute("/")({
   }),
   loader: () => {
     const today = todayISO();
-    return getDashboard({ data: { today, month: today.slice(0, 7) } });
+    return gatedLoad(getDashboard({ data: { today, month: today.slice(0, 7) } }));
   },
   errorComponent: ({ error }) => <ErrorBox message={error.message} />,
   component: Overview,
