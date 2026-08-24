@@ -48,33 +48,38 @@ export function todayISO() {
   return new Date(Date.now() + 5.5 * 3600 * 1000).toISOString().slice(0, 10);
 }
 
+const MONTHS_SHORT = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const MONTHS_LONG = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+const WEEKDAYS = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+
+// Formatted by hand: Intl output differs between the server runtime and the
+// browser (ICU data), which breaks hydration.
 export function fmtDate(iso: string) {
   const [y, m, d] = iso.split("-").map(Number);
-  return new Date(Date.UTC(y!, m! - 1, d!)).toLocaleDateString("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    timeZone: "UTC",
-  });
+  return `${String(d).padStart(2, "0")} ${MONTHS_SHORT[m! - 1]} ${y}`;
 }
 
 export function fmtDayLong(iso: string) {
   const [y, m, d] = iso.split("-").map(Number);
-  return new Date(Date.UTC(y!, m! - 1, d!)).toLocaleDateString("en-GB", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-    timeZone: "UTC",
-  });
+  const weekday = WEEKDAYS[new Date(Date.UTC(y!, m! - 1, d!)).getUTCDay()];
+  return `${weekday}, ${d} ${MONTHS_LONG[m! - 1]} ${y}`;
 }
 
 export function fmtQty(n: number) {
   return Number.isInteger(n) ? String(n) : String(Number(n.toFixed(3)));
 }
 
+function groupIN(n: number) {
+  const neg = n < 0;
+  const s = String(Math.abs(n));
+  const last3 = s.slice(-3);
+  const rest = s.slice(0, -3);
+  const grouped = rest ? rest.replace(/\B(?=(\d{2})+(?!\d))/g, ",") + "," + last3 : last3;
+  return (neg ? "-" : "") + grouped;
+}
+
 export function fmtMoney(n: number) {
-  return "₹" + Math.round(n).toLocaleString("en-IN");
+  return "₹" + groupIN(Math.round(n));
 }
 
 export function label(row: TxnRow) {
