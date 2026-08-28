@@ -42,7 +42,7 @@ export const TYPE_SWATCH: Record<string, string> = {
 export const UNITS = ["kg", "g", "pcs", "metres", "rolls", "sets"] as const;
 
 export const REASONS = ["Production", "Sample", "Wastage", "Testing", "Maintenance", "Other"];
-export const CONDITIONS = ["Resellable", "Damaged", "Repair required", "Replacement", "Scrap"];
+export const CONDITIONS = ["Resellable", "Damaged", "Repairable"];
 
 export function todayISO() {
   return new Date(Date.now() + 5.5 * 3600 * 1000).toISOString().slice(0, 10);
