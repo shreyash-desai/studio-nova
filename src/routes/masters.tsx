@@ -46,6 +46,7 @@ function Masters() {
   const remove = useServerFn(deleteMaster);
 
   const [tab, setTab] = useState<Table>("products");
+  const [editId, setEditId] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [sku, setSku] = useState("");
   const [variant, setVariant] = useState("");
@@ -71,11 +72,13 @@ function Masters() {
     if (tab === "operators") values["role"] = role.trim() || "Operator";
     setBusy(true);
     try {
-      await save({ data: { table: tab, values } });
+      await save({ data: { table: tab, id: editId, values } });
       setName("");
       setSku("");
       setVariant("");
       setSize("");
+      setRole("Staff");
+      setEditId(null);
       router.invalidate();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not save.");
@@ -87,6 +90,20 @@ function Masters() {
   async function toggleActive(row: Row) {
     await save({ data: { table: tab, id: row.id, values: { active: !row.active } } });
     router.invalidate();
+  }
+
+  function onEdit(row: Row) {
+    setEditId(row.id);
+    setName(row.name || "");
+    if (tab === "products") {
+      setSku(((row as any).sku as string) || "");
+      setVariant(((row as any).variant as string) || "");
+      setSize(((row as any).size as string) || "");
+    } else if (tab === "materials") {
+      setUnit(((row as any).default_unit as string) || "pcs");
+    } else if (tab === "operators") {
+      setRole(((row as any).role as string) || "Staff");
+    }
   }
 
   async function onDelete(row: Row) {
@@ -159,16 +176,35 @@ function Masters() {
         {tab === "operators" ? (
           <label className="w-40">
             <span className="label-plain">Role</span>
-            <input value={role} onChange={(e) => setRole(e.target.value)} className="field mt-1.5 focus:field-focus" />
+            <select value={role} onChange={(e) => setRole(e.target.value)} className="field mt-1.5 focus:field-focus">
+              <option>Admin</option>
+              <option>Member</option>
+              <option>Staff</option>
+            </select>
           </label>
         ) : null}
 
         <button
           disabled={busy}
-          className="rounded bg-foreground px-4 py-2.5 text-sm font-semibold text-background hover:opacity-90 disabled:opacity-50"
+          className="rounded-full bg-foreground px-5 py-2.5 text-sm font-bold text-background shadow hover:opacity-90 disabled:opacity-50 transition-all"
         >
-          Add
+          {editId ? "Update" : "Add"}
         </button>
+        {editId && (
+          <button
+            type="button"
+            onClick={() => {
+              setEditId(null);
+              setName("");
+              setSku("");
+              setVariant("");
+              setSize("");
+            }}
+            className="rounded-full border border-input px-5 py-2.5 text-sm font-bold text-muted-foreground hover:bg-secondary hover:text-foreground transition-all"
+          >
+            Cancel
+          </button>
+        )}
       </form>
 
       {error ? <p className="mb-4 text-sm font-semibold text-destructive">{error}</p> : null}
@@ -191,18 +227,18 @@ function Masters() {
               <tr key={row.id} className="border-b border-border/60 last:border-0 hover:bg-secondary/50">
                 <td className="px-4 py-3 font-medium">{row.name}</td>
                 {tab === "products" ? (
-                  <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{String(row["sku"] ?? "")}</td>
+                  <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{String((row as any).sku ?? "")}</td>
                 ) : null}
                 {tab === "products" ? (
                   <td className="px-4 py-3 text-xs text-muted-foreground">
-                    {[row["variant"], row["size"]].filter(Boolean).join(" · ") || "—"}
+                    {[(row as any).variant, (row as any).size].filter(Boolean).join(" · ") || "—"}
                   </td>
                 ) : null}
                 {tab === "materials" ? (
-                  <td className="px-4 py-3 text-muted-foreground">{String(row["default_unit"] ?? "")}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{String((row as any).default_unit ?? "")}</td>
                 ) : null}
                 {tab === "operators" ? (
-                  <td className="px-4 py-3 text-muted-foreground">{String(row["role"] ?? "")}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{String((row as any).role ?? "")}</td>
                 ) : null}
                 <td className="px-4 py-3">
                   <button
@@ -213,12 +249,20 @@ function Masters() {
                   </button>
                 </td>
                 <td className="px-4 py-3 text-right">
-                  <button
-                    onClick={() => onDelete(row)}
-                    className="rounded border border-input px-2 py-1 text-xs font-semibold text-muted-foreground hover:bg-secondary hover:text-destructive"
-                  >
-                    Delete
-                  </button>
+                  <div className="flex justify-end gap-2">
+                    <button
+                      onClick={() => onEdit(row)}
+                      className="rounded-full border border-input px-3 py-1 text-xs font-bold text-muted-foreground hover:bg-foreground hover:text-background transition-all"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => onDelete(row)}
+                      className="rounded-full border border-input px-3 py-1 text-xs font-bold text-muted-foreground hover:bg-destructive hover:text-destructive-foreground hover:border-destructive transition-all"
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}

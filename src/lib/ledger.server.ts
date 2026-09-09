@@ -1,7 +1,7 @@
 import { db } from "./gate.server";
 
 export const TXN_SELECT =
-  "id, ref, type, occurred_on, qty, unit, order_number, unit_price, reason, condition, notes, reversal_of, edited, created_at, product:products(id,name,sku), material:materials(id,name), channel:channels(id,name), customer:customers(id,name)";
+  "id, ref, type, occurred_on, qty, unit, order_number, unit_price, reason, condition, notes, reversal_of, edited, created_at, invoice_item, delivered_by, delivery_ref_no, order_date, dispatch_number, tick_item_photo, tick_send_tracking, tick_send_invoice, added_by, product:products(id,name,sku), material:materials(id,name), channel:channels(id,name), customer:customers(id,name), operator:operators!transactions_added_by_fkey(id,name)";
 
 export type EntryInput = {
   type: "received" | "used" | "printed" | "sold" | "return";
@@ -17,6 +17,11 @@ export type EntryInput = {
   reason?: string | null;
   condition?: string | null;
   notes?: string | null;
+  invoice_item?: string | null;
+  delivered_by?: string | null;
+  delivery_ref_no?: string | null;
+  order_date?: string | null;
+  added_by?: string | null;
 };
 
 function pad(n: number) {
@@ -62,6 +67,10 @@ export function monthRange(month: string) {
   const endDate = new Date(Date.UTC(y!, m!, 0));
   const end = `${month}-${String(endDate.getUTCDate()).padStart(2, "0")}`;
   return { start, end };
+}
+
+export function yearRange(year: string) {
+  return { start: `${year}-01-01`, end: `${year}-12-31` };
 }
 
 export async function fetchRange(start: string, end: string) {

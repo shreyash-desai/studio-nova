@@ -32,17 +32,16 @@ export function AppShell({
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-30 border-b border-border bg-background/85 backdrop-blur">
         <div className="mx-auto flex max-w-[1400px] items-center gap-6 px-5 py-3">
-          <Link to="/" className="flex items-baseline gap-2">
-            <span className="font-display text-lg font-extrabold tracking-tight">Studio Ledger</span>
-            <span className="label-plain hidden sm:inline">Daily Log Manager</span>
+          <Link to="/" className="flex items-center gap-3">
+            <img src="/logo/logo.png" alt="Studio Nova" className="h-8 w-auto object-contain mix-blend-multiply" />
           </Link>
           <nav className="ml-auto hidden items-center gap-0.5 lg:flex">
             {NAV.map((item) => (
               <Link
                 key={item.to}
                 to={item.to}
-                className="rounded px-2.5 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
-                activeProps={{ className: "bg-foreground text-background hover:bg-foreground hover:text-background" }}
+                className="rounded-full px-4 py-2 text-sm font-semibold text-muted-foreground transition-all hover:bg-secondary hover:text-foreground"
+                activeProps={{ className: "bg-foreground text-background shadow-md hover:bg-foreground hover:text-background" }}
                 activeOptions={{ exact: item.to === "/" }}
               >
                 {item.label}
@@ -54,7 +53,7 @@ export function AppShell({
               await lock();
               router.navigate({ to: "/unlock" });
             }}
-            className="ml-auto rounded border border-input px-2.5 py-1.5 text-xs font-semibold text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground lg:ml-0"
+            className="ml-auto rounded-full border border-input px-5 py-2 text-xs font-bold text-foreground transition-all hover:bg-secondary hover:shadow-sm lg:ml-0"
           >
             Lock
           </button>
@@ -64,8 +63,8 @@ export function AppShell({
             <Link
               key={item.to}
               to={item.to}
-              className="shrink-0 rounded px-2.5 py-1.5 text-sm text-muted-foreground"
-              activeProps={{ className: "bg-foreground text-background" }}
+              className="shrink-0 rounded-full px-4 py-2 text-sm font-semibold text-muted-foreground transition-all"
+              activeProps={{ className: "bg-foreground text-background shadow-md" }}
               activeOptions={{ exact: item.to === "/" }}
             >
               {item.label}

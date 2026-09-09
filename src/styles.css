@@ -59,29 +59,29 @@
 }
 
 :root {
-  --radius: 0.25rem;
+  --radius: 9999px;
 
-  --background: oklch(0.978 0.003 85);
-  --foreground: oklch(0.2 0.008 60);
+  --background: oklch(0.98 0 0);
+  --foreground: oklch(0 0 0);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.2 0.008 60);
+  --card-foreground: oklch(0 0 0);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.2 0.008 60);
+  --popover-foreground: oklch(0 0 0);
 
-  --primary: oklch(0.42 0.055 253);
-  --primary-foreground: oklch(0.985 0.003 85);
-  --secondary: oklch(0.95 0.005 85);
-  --secondary-foreground: oklch(0.28 0.008 60);
-  --muted: oklch(0.955 0.004 85);
-  --muted-foreground: oklch(0.53 0.008 65);
-  --accent: oklch(0.645 0.108 44);
-  --accent-foreground: oklch(0.99 0.003 85);
+  --primary: oklch(0 0 0);
+  --primary-foreground: oklch(1 0 0);
+  --secondary: oklch(0.95 0 0);
+  --secondary-foreground: oklch(0 0 0);
+  --muted: oklch(0.95 0 0);
+  --muted-foreground: oklch(0.45 0 0);
+  --accent: oklch(0 0 0);
+  --accent-foreground: oklch(1 0 0);
   --destructive: oklch(0.57 0.155 25);
-  --destructive-foreground: oklch(0.99 0.003 85);
+  --destructive-foreground: oklch(1 0 0);
 
-  --border: oklch(0.905 0.005 80);
-  --input: oklch(0.895 0.005 80);
-  --ring: oklch(0.645 0.108 44);
+  --border: oklch(0.9 0 0);
+  --input: oklch(0.9 0 0);
+  --ring: oklch(0 0 0);
 
   --received: oklch(0.66 0.062 145);
   --received-foreground: oklch(0.99 0.003 85);
@@ -89,12 +89,6 @@
   --used-foreground: oklch(0.99 0.003 85);
   --printed: oklch(0.645 0.108 44);
   --printed-foreground: oklch(0.99 0.003 85);
-  --sold: oklch(0.42 0.055 253);
-  --sold-foreground: oklch(0.99 0.003 85);
-  --return: oklch(0.585 0.155 25);
-  --return-foreground: oklch(0.99 0.003 85);
-}
-
 .dark {
   --background: oklch(0.2 0.008 60);
   --foreground: oklch(0.96 0.004 85);
@@ -117,32 +111,6 @@
   --ring: oklch(0.68 0.11 44);
 }
 
-@layer base {
-  * {
-    border-color: var(--color-border);
-  }
-
-  body {
-    background-color: var(--color-background);
-    color: var(--color-foreground);
-    font-family: var(--font-sans);
-    -webkit-font-smoothing: antialiased;
-  }
-
-  h1,
-  h2,
-  h3 {
-    font-family: var(--font-display);
-    letter-spacing: -0.02em;
-  }
-
-  input,
-  select,
-  textarea,
-  button {
-    font-family: inherit;
-  }
-}
 
 /* Small uppercase field / section labels with the hairline rule above them. */
 @utility label-rule {
@@ -153,7 +121,7 @@
   color: var(--color-muted-foreground);
   font-weight: 600;
   padding-top: 0.4rem;
-  border-top: 1px solid var(--color-foreground);
+  border-top: 1px solid color-mix(in oklch, var(--color-foreground) 20%, transparent);
   display: inline-block;
 }
 
@@ -175,6 +143,7 @@
   font-size: 0.9rem;
   color: var(--color-foreground);
   outline: none;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 @utility field-focus {
@@ -184,7 +153,12 @@
 
 @utility panel {
   background-color: var(--color-card);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
+  border-radius: 1.75rem;
+  box-shadow: 0 4px 24px -4px rgba(0,0,0,0.06), 0 0 4px rgba(0,0,0,0.02);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@utility panel:hover {
+  box-shadow: 0 8px 32px -4px rgba(0,0,0,0.08), 0 0 6px rgba(0,0,0,0.03);
 }
 

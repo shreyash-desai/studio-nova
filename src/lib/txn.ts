@@ -15,10 +15,20 @@ export type TxnRow = {
   reversal_of: string | null;
   edited: boolean;
   created_at: string;
-  product: ({ id: string; name: string; sku?: string } | null) | null;
-  material: Named;
-  channel: Named;
-  customer: Named;
+  invoice_item: string | null;
+  delivered_by: string | null;
+  delivery_ref_no: string | null;
+  order_date: string | null;
+  dispatch_number: string | null;
+  tick_item_photo: boolean;
+  tick_send_tracking: boolean;
+  tick_send_invoice: boolean | null;
+  added_by: string | null;
+  product: { id: string; name: string; sku: string | null } | null;
+  material: { id: string; name: string } | null;
+  channel: { id: string; name: string } | null;
+  customer: { id: string; name: string } | null;
+  operator: { id: string; name: string } | null;
 };
 
 export const TYPES = ["received", "used", "printed", "sold", "return"] as const;

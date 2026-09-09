@@ -2,7 +2,7 @@ import { useSession } from "@tanstack/react-start/server";
 import { LOCKED } from "./gated";
 import { createHash, timingSafeEqual } from "node:crypto";
 
-export type GateSession = { unlocked?: boolean };
+export type GateSession = { unlocked?: boolean; operatorId?: string; operatorName?: string; operatorRole?: string };
 
 function sessionConfig() {
   return {

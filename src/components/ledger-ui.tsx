@@ -1,4 +1,5 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
+import { Link } from "@tanstack/react-router";
 import { TYPE_LABEL, TYPE_SWATCH, fmtDate, fmtQty, label, type TxnRow } from "@/lib/txn";
 
 export function TypeBadge({ type }: { type: string }) {
@@ -22,7 +23,7 @@ export function Stat({
   accent?: string | undefined;
 }) {
   return (
-    <div className="panel p-4">
+    <div className="panel p-6">
       <div className="flex items-center gap-2">
         {accent ? <span className={`h-2 w-2 rounded-full ${accent}`} /> : null}
         <span className="label-plain">{l}</span>
@@ -35,7 +36,7 @@ export function Stat({
 
 export function EmptyState({ children }: { children: ReactNode }) {
   return (
-    <div className="panel px-6 py-14 text-center text-sm text-muted-foreground">{children}</div>
+    <div className="panel px-8 py-20 text-center text-sm text-muted-foreground">{children}</div>
   );
 }
 
@@ -46,8 +47,10 @@ export function TxnTable({
 }: {
   rows: TxnRow[];
   showDate?: boolean;
-  onReverse?: (row: TxnRow) => void;
+  onReverse?: (row: TxnRow) => Promise<void> | void;
 }) {
+  const [busyId, setBusyId] = useState<string | null>(null);
+
   if (rows.length === 0) return <EmptyState>No entries yet.</EmptyState>;
   return (
     <div className="panel overflow-x-auto">
@@ -92,21 +95,44 @@ export function TxnTable({
                   r.order_number,
                   r.reason,
                   r.condition,
+                  r.invoice_item,
+                  r.delivered_by,
+                  r.delivery_ref_no,
+                  r.order_date ? `Ordered ${fmtDate(r.order_date)}` : undefined,
                   r.notes,
+                  r.operator ? `Added by ${r.operator.name}` : undefined,
                 ]
                   .filter(Boolean)
                   .join(" · ") || "—"}
               </td>
               {onReverse ? (
                 <td className="px-4 py-3 text-right">
+                  {r.type === "sold" ? (
+                    <Link
+                      to="/dispatch/$id"
+                      params={{ id: r.id }}
+                      className="mr-3 rounded-full border border-input px-3 py-1 text-xs font-bold text-muted-foreground hover:bg-foreground hover:text-background transition-all"
+                    >
+                      Dispatch
+                    </Link>
+                  ) : null}
                   {r.reversal_of ? (
                     <span className="text-xs text-muted-foreground">reversal</span>
                   ) : (
                     <button
-                      onClick={() => onReverse(r)}
-                      className="rounded border border-input px-2 py-1 text-xs font-semibold text-muted-foreground hover:bg-secondary hover:text-destructive"
+                      disabled={busyId === r.id}
+                      onClick={async () => {
+                        if (busyId) return;
+                        setBusyId(r.id);
+                        try {
+                          await onReverse(r);
+                        } finally {
+                          setBusyId(null);
+                        }
+                      }}
+                      className="rounded-full border border-input px-3 py-1 text-xs font-bold text-muted-foreground hover:bg-destructive hover:text-destructive-foreground hover:border-destructive transition-all disabled:opacity-50 disabled:pointer-events-none"
                     >
-                      Reverse
+                      {busyId === r.id ? "Reversing..." : "Reverse"}
                     </button>
                   )}
                 </td>

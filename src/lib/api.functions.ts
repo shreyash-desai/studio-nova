@@ -1,7 +1,14 @@
 import { createServerFn } from "@tanstack/react-start";
 
+export const getPublicOperators = createServerFn({ method: "GET" }).handler(async () => {
+  const { db } = await import("./gate.server");
+  const client = await db();
+  const { data } = await client.from("operators").select("id, name, role").eq("active", true).order("name");
+  return { operators: data ?? [] };
+});
+
 export const unlockSite = createServerFn({ method: "POST" })
-  .inputValidator((data: { password: string }) => data)
+  .inputValidator((data: { password: string; operatorId: string; operatorName: string; operatorRole: string }) => data)
   .handler(async ({ data }) => {
     const { getGateSession, passwordMatches } = await import("./gate.server");
     const expected = process.env["SITE_PASSWORD"];
@@ -10,7 +17,12 @@ export const unlockSite = createServerFn({ method: "POST" })
       return { ok: false as const };
     }
     const session = await getGateSession();
-    await session.update({ unlocked: true });
+    await session.update({
+      unlocked: true,
+      operatorId: data.operatorId,
+      operatorName: data.operatorName,
+      operatorRole: data.operatorRole,
+    });
     return { ok: true as const };
   });
 
@@ -23,7 +35,7 @@ export const lockSite = createServerFn({ method: "POST" }).handler(async () => {
 
 export const getMasters = createServerFn({ method: "GET" }).handler(async () => {
   const { requireUnlocked, db } = await import("./gate.server");
-  await requireUnlocked();
+  const session = await requireUnlocked();
   const client = await db();
   const [products, materials, channels, customers, operators, bom] = await Promise.all([
     client.from("products").select("*").order("name"),
@@ -43,6 +55,7 @@ export const getMasters = createServerFn({ method: "GET" }).handler(async () => 
     customers: customers.data ?? [],
     operators: operators.data ?? [],
     bom: bom.data ?? [],
+    operatorId: session.data.operatorId,
   };
 });
 
@@ -51,7 +64,7 @@ export const createEntry = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const { requireUnlocked, db } = await import("./gate.server");
     const { nextRef, logAudit, todayISO } = await import("./ledger.server");
-    await requireUnlocked();
+    const session = await requireUnlocked();
     if (!data.qty || Number(data.qty) <= 0) throw new Error("Quantity must be greater than zero");
     const client = await db();
     const ref = await nextRef("TXN");
@@ -70,6 +83,11 @@ export const createEntry = createServerFn({ method: "POST" })
       reason: data.reason || null,
       condition: data.condition || null,
       notes: data.notes || null,
+      invoice_item: data.type === "sold" ? data.invoice_item || null : null,
+      delivered_by: data.type === "sold" ? data.delivered_by || null : null,
+      delivery_ref_no: data.type === "sold" ? data.delivery_ref_no || null : null,
+      order_date: data.type === "sold" ? data.order_date || null : null,
+      added_by: data.added_by || session.data.operatorId || null,
     };
     const { data: inserted, error } = await client
       .from("transactions")
@@ -98,12 +116,57 @@ export const updateEntry = createServerFn({ method: "POST" })
     return { ok: true as const };
   });
 
+export const getEntry = createServerFn({ method: "GET" })
+  .inputValidator((data: { id: string }) => data)
+  .handler(async ({ data }) => {
+    const { requireUnlocked, db } = await import("./gate.server");
+    const { TXN_SELECT } = await import("./ledger.server");
+    await requireUnlocked();
+    const client = await db();
+    const { data: row, error } = await client
+      .from("transactions")
+      .select(TXN_SELECT)
+      .eq("id", data.id)
+      .single();
+    if (error || !row) throw new Error(error?.message ?? "Entry not found");
+    return { row: row as import("./txn").TxnRow };
+  });
+
+export const updateDispatch = createServerFn({ method: "POST" })
+  .inputValidator(
+    (data: {
+      id: string;
+      dispatch_number?: string | null;
+      tick_item_photo?: boolean;
+      tick_send_tracking?: boolean;
+      tick_send_invoice?: boolean;
+    }) => data,
+  )
+  .handler(async ({ data }) => {
+    const { requireUnlocked, db } = await import("./gate.server");
+    const { logAudit } = await import("./ledger.server");
+    await requireUnlocked();
+    const client = await db();
+    const patch: Record<string, unknown> = {};
+    if (data.dispatch_number !== undefined) patch["dispatch_number"] = data.dispatch_number || null;
+    if (data.tick_item_photo !== undefined) patch["tick_item_photo"] = data.tick_item_photo;
+    if (data.tick_send_tracking !== undefined) patch["tick_send_tracking"] = data.tick_send_tracking;
+    if (data.tick_send_invoice !== undefined) patch["tick_send_invoice"] = data.tick_send_invoice;
+    
+    if (Object.keys(patch).length === 0) return { ok: true as const };
+    
+    const { error } = await client.from("transactions").update(patch as never).eq("id", data.id);
+    if (error) throw new Error(error.message);
+    await logAudit("update", "transaction_dispatch", data.id, patch);
+    return { ok: true as const };
+  });
+
 export const reverseEntry = createServerFn({ method: "POST" })
   .inputValidator((data: { id: string; note?: string }) => data)
   .handler(async ({ data }) => {
     const { requireUnlocked, db } = await import("./gate.server");
     const { nextRef, logAudit } = await import("./ledger.server");
-    await requireUnlocked();
+    const session = await requireUnlocked();
     const client = await db();
     const { data: original, error: readErr } = await client
       .from("transactions")
@@ -128,6 +191,11 @@ export const reverseEntry = createServerFn({ method: "POST" })
       condition: original.condition,
       notes: data.note || `Reversal of ${original.ref}`,
       reversal_of: original.id,
+      invoice_item: original.invoice_item,
+      delivered_by: original.delivered_by,
+      delivery_ref_no: original.delivery_ref_no,
+      order_date: original.order_date,
+      added_by: session.data.operatorId || null,
     });
     if (error) throw new Error(error.message);
     await client.from("transactions").update({ voided: true }).eq("id", original.id);
@@ -160,14 +228,14 @@ export const getDayLog = createServerFn({ method: "GET" })
   });
 
 export const getDashboard = createServerFn({ method: "GET" })
-  .inputValidator((data: { month: string; today: string }) => data)
+  .inputValidator((data: { year: string; today: string }) => data)
   .handler(async ({ data }) => {
     const { requireUnlocked } = await import("./gate.server");
-    const { monthRange, fetchRange } = await import("./ledger.server");
+    const { yearRange, fetchRange } = await import("./ledger.server");
     await requireUnlocked();
-    const { start, end } = monthRange(data.month);
+    const { start, end } = yearRange(data.year);
     const rows = await fetchRange(start, end);
-    return { rows, today: data.today, month: data.month };
+    return { rows, today: data.today, year: data.year };
   });
 
 export const getLedger = createServerFn({ method: "GET" })

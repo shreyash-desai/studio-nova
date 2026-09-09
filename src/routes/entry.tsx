@@ -45,6 +45,7 @@ function QuickEntry() {
 
   const [type, setType] = useState<(typeof TYPES)[number]>("received");
   const [date, setDate] = useState(todayISO());
+  const [addedBy, setAddedBy] = useState((masters as any).operatorId || "");
   const [itemId, setItemId] = useState("");
   const [qty, setQty] = useState("");
   const [unit, setUnit] = useState("");
@@ -59,6 +60,10 @@ function QuickEntry() {
   const [busy, setBusy] = useState(false);
   const [flash, setFlash] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [invoiceItem, setInvoiceItem] = useState("");
+  const [deliveredBy, setDeliveredBy] = useState("");
+  const [deliveryRefNo, setDeliveryRefNo] = useState("");
+  const [orderDate, setOrderDate] = useState("");
 
   const isMaterial = type === "received" || type === "used";
   const items: Master[] = isMaterial ? (masters.materials as Master[]) : (masters.products as Master[]);
@@ -80,6 +85,10 @@ function QuickEntry() {
     setOrderNumber("");
     setPrice("");
     setNotes("");
+    setInvoiceItem("");
+    setDeliveredBy("");
+    setDeliveryRefNo("");
+    setOrderDate("");
   }
 
   async function onSubmit(e: React.FormEvent) {
@@ -93,6 +102,7 @@ function QuickEntry() {
         data: {
           type,
           occurred_on: date,
+          added_by: addedBy || null,
           product_id: isMaterial ? null : itemId,
           material_id: isMaterial ? itemId : null,
           qty: Number(qty),
@@ -104,12 +114,20 @@ function QuickEntry() {
           reason: type === "used" ? reason : null,
           condition: type === "return" ? condition : null,
           notes: type === "sold" ? notes || null : null,
+          invoice_item: type === "sold" ? invoiceItem || null : null,
+          delivered_by: type === "sold" ? deliveredBy || null : null,
+          delivery_ref_no: type === "sold" ? deliveryRefNo || null : null,
+          order_date: type === "sold" ? orderDate || null : null,
         },
       });
-      setFlash(`Saved ${res.ref}`);
-      reset();
-      router.invalidate();
-      setTimeout(() => setFlash(null), 3000);
+      if (type === "sold") {
+        router.navigate({ to: "/dispatch/$id", params: { id: res.id } });
+      } else {
+        setFlash(`Saved ${res.ref}`);
+        reset();
+        router.invalidate();
+        setTimeout(() => setFlash(null), 3000);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not save the entry.");
     } finally {
@@ -150,6 +168,22 @@ function QuickEntry() {
               onChange={(e) => setDate(e.target.value)}
               className="field focus:field-focus"
             />
+          </Field>
+          
+          <Field label="Added by">
+            <select
+              value={addedBy}
+              onChange={(e) => setAddedBy(e.target.value)}
+              className="field focus:field-focus disabled:opacity-70 disabled:bg-secondary disabled:cursor-not-allowed"
+              disabled
+            >
+              <option value="">Select Operator…</option>
+              {((masters as any).operators || []).map((o: any) => (
+                <option key={o.id} value={o.id}>
+                  {o.name}
+                </option>
+              ))}
+            </select>
           </Field>
 
           <Field label={isMaterial ? "Material" : "Product"}>
@@ -276,6 +310,38 @@ function QuickEntry() {
 
           {type === "sold" ? (
             <>
+              <Field label="Invoice Item">
+                <input
+                  value={invoiceItem}
+                  onChange={(e) => setInvoiceItem(e.target.value)}
+                  placeholder="Optional"
+                  className="field focus:field-focus"
+                />
+              </Field>
+              <Field label="Delivered By">
+                <input
+                  value={deliveredBy}
+                  onChange={(e) => setDeliveredBy(e.target.value)}
+                  placeholder="Optional"
+                  className="field focus:field-focus"
+                />
+              </Field>
+              <Field label="Delivery Ref No">
+                <input
+                  value={deliveryRefNo}
+                  onChange={(e) => setDeliveryRefNo(e.target.value)}
+                  placeholder="Optional"
+                  className="field focus:field-focus"
+                />
+              </Field>
+              <Field label="Order Date">
+                <input
+                  type="date"
+                  value={orderDate}
+                  onChange={(e) => setOrderDate(e.target.value)}
+                  className="field focus:field-focus"
+                />
+              </Field>
               <Field label="Unit price (₹)">
                 <input
                   type="number"
@@ -306,14 +372,14 @@ function QuickEntry() {
           <button
             type="submit"
             disabled={busy}
-            className="rounded bg-foreground px-5 py-2.5 text-sm font-semibold text-background hover:opacity-90 disabled:opacity-50"
+            className="rounded-full bg-foreground px-5 py-3 text-sm font-bold text-background shadow transition-all hover:opacity-90 disabled:opacity-50"
           >
             {busy ? "Saving…" : `Save ${TYPE_LABEL[type]!.toLowerCase()} entry`}
           </button>
           <button
             type="button"
             onClick={() => reset()}
-            className="rounded border border-input px-4 py-2.5 text-sm font-semibold text-muted-foreground hover:bg-secondary"
+            className="rounded-full border border-input px-5 py-3 text-sm font-bold text-muted-foreground transition-all hover:bg-secondary"
           >
             Clear
           </button>

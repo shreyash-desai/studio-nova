@@ -73,13 +73,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Studio Ledger — Daily Log Manager" },
+      { title: "Studio Nova — Daily Log Manager" },
       {
         name: "description",
         content:
           "Passcode-protected daily log manager for stock received, materials used, printed output, sales and returns.",
       },
-      { property: "og:title", content: "Studio Ledger — Daily Log Manager" },
+      { property: "og:title", content: "Studio Nova — Daily Log Manager" },
       {
         property: "og:description",
         content: "Track stock, production, sales and returns from one fast daily log.",
