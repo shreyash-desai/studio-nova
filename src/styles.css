@@ -158,9 +158,9 @@
   border-radius: 1.75rem;
   box-shadow: 0 4px 24px -4px rgba(0,0,0,0.06), 0 0 4px rgba(0,0,0,0.02);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
 
-@utility panel:hover {
-  box-shadow: 0 8px 32px -4px rgba(0,0,0,0.08), 0 0 6px rgba(0,0,0,0.03);
+  &:hover {
+    box-shadow: 0 8px 32px -4px rgba(0,0,0,0.08), 0 0 6px rgba(0,0,0,0.03);
+  }
 }
 
