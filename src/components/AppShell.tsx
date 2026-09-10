@@ -40,6 +40,7 @@ export function AppShell({
               <Link
                 key={item.to}
                 to={item.to}
+                preload="intent"
                 className="rounded-full px-4 py-2 text-sm font-semibold text-muted-foreground transition-all hover:bg-secondary hover:text-foreground"
                 activeProps={{ className: "bg-foreground !text-[var(--background)] shadow-md hover:bg-foreground hover:!text-[var(--background)]" }}
                 activeOptions={{ exact: item.to === "/" }}
@@ -63,6 +64,7 @@ export function AppShell({
             <Link
               key={item.to}
               to={item.to}
+              preload="intent"
               className="shrink-0 rounded-full px-4 py-2 text-sm font-semibold text-muted-foreground transition-all"
               activeProps={{ className: "bg-foreground !text-[var(--background)] shadow-md hover:bg-foreground hover:!text-[var(--background)]" }}
               activeOptions={{ exact: item.to === "/" }}
@@ -81,7 +83,7 @@ export function AppShell({
           </div>
           {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
         </div>
-        <div key={router.state.location.pathname} className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+        <div key={router.state.location.pathname} className="animate-in fade-in slide-in-from-bottom-2 duration-150">
           {children}
         </div>
       </main>
