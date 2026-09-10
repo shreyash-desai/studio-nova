@@ -78,8 +78,14 @@ function Unlock() {
           
           {op && (
             <div>
-              <span className="label-plain">Role</span>
-              <div className="mt-1 text-sm font-semibold">{op.role}</div>
+              <label htmlFor="role" className="label-plain">Role</label>
+              <input
+                id="role"
+                type="text"
+                value={op.role.charAt(0).toUpperCase() + op.role.slice(1)}
+                disabled
+                className="field mt-2 font-semibold disabled:opacity-70 disabled:bg-secondary disabled:cursor-not-allowed"
+              />
             </div>
           )}
 
