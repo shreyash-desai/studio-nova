@@ -67,6 +67,7 @@ function QuickEntry() {
 
   const isMaterial = type === "received" || type === "used";
   const items: Master[] = isMaterial ? (masters.materials as Master[]) : (masters.products as Master[]);
+  const isB2B = (masters.channels as Master[]).find((c) => c.id === channelId)?.name?.toLowerCase() === "b2b";
 
   const defaultUnit = useMemo(() => {
     if (!isMaterial) return "pcs";
@@ -108,7 +109,7 @@ function QuickEntry() {
           qty: Number(qty),
           unit: effectiveUnit || "pcs",
           channel_id: type === "sold" || type === "return" ? channelId || null : null,
-          customer_id: type === "sold" || type === "return" ? customerId || null : null,
+          customer_id: (type === "sold" || type === "return") && isB2B ? customerId || null : null,
           order_number: type === "sold" || type === "return" ? orderNumber || null : null,
           unit_price: type === "sold" && price ? Number(price) : null,
           reason: type === "used" ? reason : null,
@@ -283,20 +284,22 @@ function QuickEntry() {
                   ))}
                 </select>
               </Field>
-              <Field label="Customer">
-                <select
-                  value={customerId}
-                  onChange={(e) => setCustomerId(e.target.value)}
-                  className="field focus:field-focus"
-                >
-                  <option value="">Select…</option>
-                  {(masters.customers as Master[]).map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
-              </Field>
+              {isB2B ? (
+                <Field label="Customer">
+                  <select
+                    value={customerId}
+                    onChange={(e) => setCustomerId(e.target.value)}
+                    className="field focus:field-focus"
+                  >
+                    <option value="">Select…</option>
+                    {(masters.customers as Master[]).map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+              ) : null}
               <Field label="Order number">
                 <input
                   value={orderNumber}
