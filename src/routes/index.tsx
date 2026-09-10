@@ -125,16 +125,16 @@ function Overview() {
           <div className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={monthlyData} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }} dy={10} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }} />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: "var(--muted-foreground)" }} dy={10} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: "var(--muted-foreground)" }} />
                 <Tooltip 
-                  cursor={{ fill: "hsl(var(--secondary))" }}
-                  contentStyle={{ borderRadius: "8px", border: "1px solid hsl(var(--border))", backgroundColor: "hsl(var(--card))", color: "hsl(var(--card-foreground))", boxShadow: "0 4px 12px rgba(0,0,0,0.1)" }}
+                  cursor={{ fill: "var(--secondary)" }}
+                  contentStyle={{ borderRadius: "8px", border: "1px solid var(--border)", backgroundColor: "var(--card)", color: "var(--card-foreground)", boxShadow: "0 4px 12px rgba(0,0,0,0.1)" }}
                 />
                 <Legend iconType="circle" wrapperStyle={{ paddingTop: "20px", fontSize: "12px" }} />
-                <Bar dataKey="Production" fill="hsl(var(--accent))" radius={[4, 4, 0, 0]} maxBarSize={40} />
-                <Bar dataKey="Sales" fill="hsl(var(--foreground))" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                <Bar dataKey="Production" fill="var(--accent)" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                <Bar dataKey="Sales" fill="var(--foreground)" radius={[4, 4, 0, 0]} maxBarSize={40} />
               </BarChart>
             </ResponsiveContainer>
           </div>
