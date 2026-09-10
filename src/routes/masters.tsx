@@ -87,11 +87,6 @@ function Masters() {
     }
   }
 
-  async function toggleActive(row: Row) {
-    await save({ data: { table: tab, id: row.id, values: { active: !row.active } } });
-    router.invalidate();
-  }
-
   function onEdit(row: Row) {
     setEditId(row.id);
     setName(row.name || "");
@@ -112,7 +107,7 @@ function Masters() {
       await remove({ data: { table: tab, id: row.id } });
       router.invalidate();
     } catch {
-      setError("That record is used by existing entries — deactivate it instead.");
+      setError("This record cannot be deleted because it is linked to existing transactions.");
     }
   }
 
@@ -218,8 +213,7 @@ function Masters() {
               {tab === "products" ? <th className="label-plain px-4 py-3">Variant / Size</th> : null}
               {tab === "materials" ? <th className="label-plain px-4 py-3">Default unit</th> : null}
               {tab === "operators" ? <th className="label-plain px-4 py-3">Role</th> : null}
-              <th className="label-plain px-4 py-3">Status</th>
-              <th className="label-plain px-4 py-3" />
+              <th className="label-plain px-4 py-3 text-right" />
             </tr>
           </thead>
           <tbody>
@@ -240,14 +234,7 @@ function Masters() {
                 {tab === "operators" ? (
                   <td className="px-4 py-3 text-muted-foreground">{String((row as any).role ?? "")}</td>
                 ) : null}
-                <td className="px-4 py-3">
-                  <button
-                    onClick={() => toggleActive(row)}
-                    className={`text-xs font-semibold ${row.active ? "text-received" : "text-muted-foreground"}`}
-                  >
-                    {row.active ? "Active" : "Inactive"}
-                  </button>
-                </td>
+
                 <td className="px-4 py-3 text-right">
                   <div className="flex justify-end gap-2">
                     <button
