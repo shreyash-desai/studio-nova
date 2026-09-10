@@ -307,6 +307,15 @@ export const deleteMaster = createServerFn({ method: "POST" })
     const { logAudit } = await import("./ledger.server");
     await requireUnlocked();
     const client = await db();
+
+    // Manually nullify foreign keys in transactions to bypass RESTRICT constraints,
+    // explicitly allowing users to delete Master items even if they have historical data.
+    if (data.table === "products") await client.from("transactions").update({ product_id: null }).eq("product_id", data.id);
+    if (data.table === "materials") await client.from("transactions").update({ material_id: null }).eq("material_id", data.id);
+    if (data.table === "channels") await client.from("transactions").update({ channel_id: null }).eq("channel_id", data.id);
+    if (data.table === "customers") await client.from("transactions").update({ customer_id: null }).eq("customer_id", data.id);
+    if (data.table === "operators") await client.from("transactions").update({ added_by: null }).eq("added_by", data.id);
+
     const { error } = await client.from(data.table).delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     await logAudit("delete", data.table, data.id, {});

@@ -106,8 +106,8 @@ function Masters() {
     try {
       await remove({ data: { table: tab, id: row.id } });
       router.invalidate();
-    } catch {
-      setError("This record cannot be deleted because it is linked to existing transactions.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not delete record.");
     }
   }
 
