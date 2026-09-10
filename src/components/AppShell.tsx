@@ -55,7 +55,7 @@ export function AppShell({
             }}
             className="ml-auto rounded-full border border-input px-5 py-2 text-xs font-bold text-foreground transition-all hover:bg-secondary hover:shadow-sm lg:ml-0"
           >
-            Lock
+            Log out
           </button>
         </div>
         <nav className="flex gap-0.5 overflow-x-auto border-t border-border px-5 py-2 lg:hidden">
