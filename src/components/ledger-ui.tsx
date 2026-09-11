@@ -93,7 +93,6 @@ export function TxnTable({
                   r.channel?.name,
                   r.customer?.name,
                   r.order_number,
-                  r.reason,
                   r.condition,
                   r.invoice_item,
                   r.delivered_by,

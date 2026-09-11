@@ -4,7 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
 import { getMasters, createEntries } from "@/lib/api.functions";
 import { AppShell } from "@/components/AppShell";
-import { TYPES, TYPE_LABEL, TYPE_SWATCH, UNITS, REASONS, CONDITIONS, todayISO } from "@/lib/txn";
+import { TYPES, TYPE_LABEL, TYPE_SWATCH, UNITS, CONDITIONS, todayISO } from "@/lib/txn";
 
 export const Route = createFileRoute("/entry")({
   head: () => ({
@@ -53,7 +53,6 @@ function QuickEntry() {
   const [channelId, setChannelId] = useState("");
   const [customerId, setCustomerId] = useState("");
   const [orderNumber, setOrderNumber] = useState("");
-  const [reason, setReason] = useState(REASONS[0]!);
   const [condition, setCondition] = useState(CONDITIONS[0]!);
   const [notes, setNotes] = useState("");
   
@@ -121,7 +120,6 @@ function QuickEntry() {
           customer_id: (isSold || isReturn) && isB2B ? customerId || null : null,
           order_number: isSold || isReturn ? orderNumber || null : null,
           unit_price: null,
-          reason: type === "used" ? reason : null,
           condition: isReturn ? condition : null,
           notes: isSold ? notes || null : null,
           invoice_item: isSold ? invoiceItem || null : null,
@@ -235,13 +233,6 @@ function QuickEntry() {
               </>
             ) : null}
 
-            {type === "used" ? (
-              <Field label="Reason">
-                <select value={reason} onChange={(e) => setReason(e.target.value)} className="field focus:field-focus">
-                  {REASONS.map((r) => <option key={r}>{r}</option>)}
-                </select>
-              </Field>
-            ) : null}
 
             {isReturn ? (
               <Field label="Condition">

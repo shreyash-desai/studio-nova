@@ -9,7 +9,6 @@ export type TxnRow = {
   unit: string | null;
   order_number: string | null;
   unit_price: number | null;
-  reason: string | null;
   condition: string | null;
   notes: string | null;
   reversal_of: string | null;
@@ -50,7 +49,6 @@ export const TYPE_SWATCH: Record<string, string> = {
 
 export const UNITS = ["kg", "g", "pcs", "metres", "rolls", "sets"] as const;
 
-export const REASONS = ["Production", "Sample", "Wastage", "Testing", "Maintenance", "Other"];
 export const CONDITIONS = ["Resellable", "Damaged", "Repairable"];
 
 export function todayISO() {
