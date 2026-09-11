@@ -4,7 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
 import { getMasters, createEntries } from "@/lib/api.functions";
 import { AppShell } from "@/components/AppShell";
-import { TYPES, TYPE_LABEL, TYPE_SWATCH, UNITS, CONDITIONS, todayISO } from "@/lib/txn";
+import { TYPES, TYPE_LABEL, TYPE_SWATCH, CONDITIONS, todayISO } from "@/lib/txn";
 
 export const Route = createFileRoute("/entry")({
   head: () => ({
@@ -29,7 +29,7 @@ export const Route = createFileRoute("/entry")({
 
 type Master = { id: string; name: string; unit?: string | null };
 
-type EntryItem = { _key: string; itemId: string; qty: string; unit: string; unitTouched: boolean };
+type EntryItem = { _key: string; itemId: string; qty: string };
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -61,7 +61,7 @@ function QuickEntry() {
   const [deliveryRefNo, setDeliveryRefNo] = useState("");
 
   // Items
-  const [items, setItems] = useState<EntryItem[]>([{ _key: Math.random().toString(), itemId: "", qty: "", unit: "", unitTouched: false }]);
+  const [items, setItems] = useState<EntryItem[]>([{ _key: Math.random().toString(), itemId: "", qty: "" }]);
 
   const [busy, setBusy] = useState(false);
   const [flash, setFlash] = useState<string | null>(null);
@@ -73,15 +73,11 @@ function QuickEntry() {
   const isSold = type === "sold";
   const isReturn = type === "return";
 
-  function getDefaultUnit(itemId: string) {
-    if (!isMaterial) return "pcs";
-    const m = (masters.materials as Master[]).find((x) => x.id === itemId);
-    return m?.unit ?? "";
-  }
+
 
   function reset(keepType = true) {
     if (!keepType) setType("received");
-    setItems([{ _key: Math.random().toString(), itemId: "", qty: "", unit: "", unitTouched: false }]);
+    setItems([{ _key: Math.random().toString(), itemId: "", qty: "" }]);
     setOrderNumber("");
     setNotes("");
     setInvoiceItem("");
@@ -107,7 +103,6 @@ function QuickEntry() {
     setBusy(true);
     try {
       const payload = validItems.map(item => {
-        const effectiveUnit = item.unitTouched && item.unit ? item.unit : getDefaultUnit(item.itemId);
         return {
           type,
           occurred_on: date,
@@ -115,7 +110,6 @@ function QuickEntry() {
           product_id: isMaterial ? null : item.itemId,
           material_id: isMaterial ? item.itemId : null,
           qty: Number(item.qty),
-          unit: effectiveUnit || "pcs",
           channel_id: isSold || isReturn ? channelId || null : null,
           customer_id: (isSold || isReturn) && isB2B ? customerId || null : null,
           order_number: isSold || isReturn ? orderNumber || null : null,
@@ -250,7 +244,7 @@ function QuickEntry() {
             <h2 className="text-sm font-bold tracking-tight text-foreground/80 uppercase">Items</h2>
             <button
               type="button"
-              onClick={() => setItems([...items, { _key: Math.random().toString(), itemId: "", qty: "", unit: "", unitTouched: false }])}
+              onClick={() => setItems([...items, { _key: Math.random().toString(), itemId: "", qty: "" }])}
               className="text-xs font-bold text-accent hover:underline"
             >
               + Add Item
@@ -259,9 +253,6 @@ function QuickEntry() {
           
           <div className="space-y-4">
             {items.map((item, index) => {
-              const defUnit = getDefaultUnit(item.itemId);
-              const effUnit = item.unitTouched && item.unit ? item.unit : defUnit;
-
               return (
                 <div key={item._key} className="flex flex-wrap items-end gap-3 rounded-xl border border-border p-4 relative group">
                   {items.length > 1 && (
@@ -280,7 +271,6 @@ function QuickEntry() {
                         onChange={(e) => {
                           const newItems = [...items];
                           newItems[index]!.itemId = e.target.value;
-                          newItems[index]!.unitTouched = false;
                           setItems(newItems);
                         }}
                         className="field focus:field-focus"
@@ -307,23 +297,7 @@ function QuickEntry() {
                       />
                     </Field>
                   </div>
-                  <div className="w-28">
-                    <Field label="Unit">
-                      <select
-                        value={effUnit}
-                        onChange={(e) => {
-                          const newItems = [...items];
-                          newItems[index]!.unit = e.target.value;
-                          newItems[index]!.unitTouched = true;
-                          setItems(newItems);
-                        }}
-                        className="field focus:field-focus"
-                      >
-                        <option value="">Select…</option>
-                        {UNITS.map((u) => <option key={u} value={u}>{u}</option>)}
-                      </select>
-                    </Field>
-                  </div>
+
                 </div>
               );
             })}

@@ -86,7 +86,6 @@ export function TxnTable({
                 className={`whitespace-nowrap px-4 py-3 text-right font-semibold tabular-nums ${r.qty < 0 ? "text-destructive" : ""}`}
               >
                 {fmtQty(r.qty)}
-                <span className="ml-1 text-xs font-normal text-muted-foreground">{r.unit ?? ""}</span>
               </td>
               <td className="px-4 py-3 text-xs text-muted-foreground">
                 {[

@@ -1,15 +1,14 @@
 import { db } from "./gate.server";
 
 export const TXN_SELECT =
-  "id, ref, type, occurred_on, qty, unit, order_number, unit_price, condition, notes, reversal_of, edited, created_at, invoice_item, delivered_by, delivery_ref_no, dispatch_number, tick_item_photo, tick_send_tracking, tick_send_invoice, added_by, product:products(id,name,sku), material:materials(id,name), channel:channels(id,name), customer:customers(id,name), operator:operators!transactions_added_by_fkey(id,name)";
+  "id, ref, type, occurred_on, qty, order_number, unit_price, condition, notes, reversal_of, edited, created_at, invoice_item, delivered_by, delivery_ref_no, dispatch_number, tick_item_photo, tick_send_tracking, tick_send_invoice, added_by, product:products(id,name,sku), material:materials(id,name), channel:channels(id,name), customer:customers(id,name), operator:operators!transactions_added_by_fkey(id,name)";
 
 export type EntryInput = {
   type: "received" | "used" | "printed" | "sold" | "return";
   occurred_on?: string | null;
   product_id?: string | null;
   material_id?: string | null;
-  qty: number;
-  unit?: string | null;
+  qty: number | string;
   channel_id?: string | null;
   customer_id?: string | null;
   order_number?: string | null;

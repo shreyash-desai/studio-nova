@@ -4,7 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { getMasters, saveMaster, deleteMaster } from "@/lib/api.functions";
 import { AppShell } from "@/components/AppShell";
-import { UNITS } from "@/lib/txn";
+import { label } from "@/lib/txn";
 
 export const Route = createFileRoute("/masters")({
   head: () => ({
@@ -51,7 +51,7 @@ function Masters() {
   const [sku, setSku] = useState("");
   const [variant, setVariant] = useState("");
   const [size, setSize] = useState("");
-  const [unit, setUnit] = useState<string>("pcs");
+
   const [role, setRole] = useState("Operator");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -68,7 +68,6 @@ function Masters() {
       values["variant"] = variant.trim() || null;
       values["size"] = size.trim() || null;
     }
-    if (tab === "materials") values["default_unit"] = unit;
     if (tab === "operators") values["role"] = role.trim() || "Operator";
     setBusy(true);
     try {
@@ -94,8 +93,6 @@ function Masters() {
       setSku(((row as any).sku as string) || "");
       setVariant(((row as any).variant as string) || "");
       setSize(((row as any).size as string) || "");
-    } else if (tab === "materials") {
-      setUnit(((row as any).default_unit as string) || "pcs");
     } else if (tab === "operators") {
       setRole(((row as any).role as string) || "Staff");
     }
@@ -157,16 +154,7 @@ function Masters() {
           </>
         ) : null}
 
-        {tab === "materials" ? (
-          <label className="w-36">
-            <span className="label-plain">Default unit</span>
-            <select value={unit} onChange={(e) => setUnit(e.target.value)} className="field mt-1.5 focus:field-focus">
-              {UNITS.map((u) => (
-                <option key={u}>{u}</option>
-              ))}
-            </select>
-          </label>
-        ) : null}
+
 
         {tab === "operators" ? (
           <label className="w-40">

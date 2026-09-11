@@ -6,7 +6,6 @@ export type TxnRow = {
   type: "received" | "used" | "printed" | "sold" | "return";
   occurred_on: string;
   qty: number;
-  unit: string | null;
   order_number: string | null;
   unit_price: number | null;
   condition: string | null;
@@ -47,7 +46,6 @@ export const TYPE_SWATCH: Record<string, string> = {
   return: "bg-return",
 };
 
-export const UNITS = ["kg", "g", "pcs", "metres", "rolls", "sets"] as const;
 
 export const CONDITIONS = ["Resellable", "Damaged", "Repairable"];
 
