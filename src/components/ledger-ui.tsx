@@ -98,7 +98,6 @@ export function TxnTable({
                   r.invoice_item,
                   r.delivered_by,
                   r.delivery_ref_no,
-                  r.order_date ? `Ordered ${fmtDate(r.order_date)}` : undefined,
                   r.notes,
                   r.operator ? `Added by ${r.operator.name}` : undefined,
                 ]

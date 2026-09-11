@@ -60,7 +60,6 @@ function QuickEntry() {
   const [invoiceItem, setInvoiceItem] = useState("");
   const [deliveredBy, setDeliveredBy] = useState("");
   const [deliveryRefNo, setDeliveryRefNo] = useState("");
-  const [orderDate, setOrderDate] = useState("");
 
   // Items
   const [items, setItems] = useState<EntryItem[]>([{ _key: Math.random().toString(), itemId: "", qty: "", unit: "", unitTouched: false }]);
@@ -89,7 +88,6 @@ function QuickEntry() {
     setInvoiceItem("");
     setDeliveredBy("");
     setDeliveryRefNo("");
-    setOrderDate("");
     setChannelId("");
     setCustomerId("");
   }
@@ -129,7 +127,6 @@ function QuickEntry() {
           invoice_item: isSold ? invoiceItem || null : null,
           delivered_by: isSold ? deliveredBy || null : null,
           delivery_ref_no: isSold ? deliveryRefNo || null : null,
-          order_date: isSold ? orderDate || null : null,
         };
       });
 
@@ -231,9 +228,6 @@ function QuickEntry() {
                 </Field>
                 <Field label="Delivered By *">
                   <input value={deliveredBy} onChange={(e) => setDeliveredBy(e.target.value)} placeholder="Required" required className="field focus:field-focus" />
-                </Field>
-                <Field label="Order Date">
-                  <input type="date" value={orderDate} onChange={(e) => setOrderDate(e.target.value)} className="field focus:field-focus" />
                 </Field>
                 <Field label="Notes">
                   <input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Optional" className="field focus:field-focus" />

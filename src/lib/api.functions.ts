@@ -86,7 +86,6 @@ export const createEntry = createServerFn({ method: "POST" })
       invoice_item: data.type === "sold" ? data.invoice_item || null : null,
       delivered_by: data.type === "sold" ? data.delivered_by || null : null,
       delivery_ref_no: data.type === "sold" ? data.delivery_ref_no || null : null,
-      order_date: data.type === "sold" ? data.order_date || null : null,
       added_by: data.added_by || session.data.operatorId || null,
     };
     const { data: inserted, error } = await client
@@ -136,7 +135,6 @@ export const createEntries = createServerFn({ method: "POST" })
         invoice_item: d.type === "sold" ? d.invoice_item || null : null,
         delivered_by: d.type === "sold" ? d.delivered_by || null : null,
         delivery_ref_no: d.type === "sold" ? d.delivery_ref_no || null : null,
-        order_date: d.type === "sold" ? d.order_date || null : null,
         added_by: d.added_by || session.data.operatorId || null,
       };
     });

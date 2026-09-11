@@ -18,7 +18,6 @@ export type TxnRow = {
   invoice_item: string | null;
   delivered_by: string | null;
   delivery_ref_no: string | null;
-  order_date: string | null;
   dispatch_number: string | null;
   tick_item_photo: boolean;
   tick_send_tracking: boolean;
