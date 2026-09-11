@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuditRouteImport } from './routes/audit'
+import { Route as DispatchesRouteImport } from './routes/dispatches'
 import { Route as EntryRouteImport } from './routes/entry'
 import { Route as LedgerRouteImport } from './routes/ledger'
 import { Route as LogRouteImport } from './routes/log'
@@ -28,6 +29,11 @@ const IndexRoute = IndexRouteImport.update({
 const AuditRoute = AuditRouteImport.update({
   id: '/audit',
   path: '/audit',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DispatchesRoute = DispatchesRouteImport.update({
+  id: '/dispatches',
+  path: '/dispatches',
   getParentRoute: () => rootRouteImport,
 } as any)
 const EntryRoute = EntryRouteImport.update({
@@ -74,6 +80,7 @@ const DispatchIdRoute = DispatchIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/audit': typeof AuditRoute
+  '/dispatches': typeof DispatchesRoute
   '/entry': typeof EntryRoute
   '/ledger': typeof LedgerRoute
   '/log': typeof LogRoute
@@ -86,6 +93,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/audit': typeof AuditRoute
+  '/dispatches': typeof DispatchesRoute
   '/entry': typeof EntryRoute
   '/ledger': typeof LedgerRoute
   '/log': typeof LogRoute
@@ -99,6 +107,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/audit': typeof AuditRoute
+  '/dispatches': typeof DispatchesRoute
   '/entry': typeof EntryRoute
   '/ledger': typeof LedgerRoute
   '/log': typeof LogRoute
@@ -113,6 +122,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/audit'
+    | '/dispatches'
     | '/entry'
     | '/ledger'
     | '/log'
@@ -125,6 +135,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/audit'
+    | '/dispatches'
     | '/entry'
     | '/ledger'
     | '/log'
@@ -137,6 +148,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/audit'
+    | '/dispatches'
     | '/entry'
     | '/ledger'
     | '/log'
@@ -150,6 +162,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuditRoute: typeof AuditRoute
+  DispatchesRoute: typeof DispatchesRoute
   EntryRoute: typeof EntryRoute
   LedgerRoute: typeof LedgerRoute
   LogRoute: typeof LogRoute
@@ -174,6 +187,13 @@ declare module '@tanstack/react-router' {
       path: '/audit'
       fullPath: '/audit'
       preLoaderRoute: typeof AuditRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dispatches': {
+      id: '/dispatches'
+      path: '/dispatches'
+      fullPath: '/dispatches'
+      preLoaderRoute: typeof DispatchesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/entry': {
@@ -238,6 +258,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuditRoute: AuditRoute,
+  DispatchesRoute: DispatchesRoute,
   EntryRoute: EntryRoute,
   LedgerRoute: LedgerRoute,
   LogRoute: LogRoute,

@@ -104,15 +104,7 @@ export function TxnTable({
               </td>
               {onReverse ? (
                 <td className="px-4 py-3 text-right">
-                  {r.type === "sold" ? (
-                    <Link
-                      to="/dispatch/$id"
-                      params={{ id: r.id }}
-                      className="mr-3 rounded-full border border-input px-3 py-1 text-xs font-bold text-muted-foreground hover:bg-foreground hover:text-background transition-all"
-                    >
-                      Dispatch
-                    </Link>
-                  ) : null}
+
                   {r.reversal_of ? (
                     <span className="text-xs text-muted-foreground">reversal</span>
                   ) : (

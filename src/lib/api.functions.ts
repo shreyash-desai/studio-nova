@@ -366,6 +366,20 @@ export const deleteMaster = createServerFn({ method: "POST" })
 
     const { error } = await client.from(data.table).delete().eq("id", data.id);
     if (error) throw new Error(error.message);
-    await logAudit("delete", data.table, data.id, {});
+    await logAudit("delete", data.table, data.id, { deleted: true });
     return { ok: true as const };
   });
+
+export const getDispatches = createServerFn({ method: "GET" }).handler(async () => {
+  const { requireUnlocked, db } = await import("./gate.server");
+  const { TXN_SELECT } = await import("./ledger.server");
+  await requireUnlocked();
+  const client = await db();
+  const { data: rows } = await client
+    .from("transactions")
+    .select(TXN_SELECT)
+    .eq("type", "sold")
+    .order("occurred_on", { ascending: false })
+    .order("created_at", { ascending: false });
+  return { rows: (rows ?? []) as import("./txn").TxnRow[] };
+});
