@@ -53,7 +53,6 @@ function QuickEntry() {
   const [channelId, setChannelId] = useState("");
   const [customerId, setCustomerId] = useState("");
   const [orderNumber, setOrderNumber] = useState("");
-  const [price, setPrice] = useState("");
   const [reason, setReason] = useState(REASONS[0]!);
   const [condition, setCondition] = useState(CONDITIONS[0]!);
   const [notes, setNotes] = useState("");
@@ -84,7 +83,6 @@ function QuickEntry() {
     setUnit("");
     setUnitTouched(false);
     setOrderNumber("");
-    setPrice("");
     setNotes("");
     setInvoiceItem("");
     setDeliveredBy("");
@@ -111,7 +109,7 @@ function QuickEntry() {
           channel_id: type === "sold" || type === "return" ? channelId || null : null,
           customer_id: (type === "sold" || type === "return") && isB2B ? customerId || null : null,
           order_number: type === "sold" || type === "return" ? orderNumber || null : null,
-          unit_price: type === "sold" && price ? Number(price) : null,
+          unit_price: null,
           reason: type === "used" ? reason : null,
           condition: type === "return" ? condition : null,
           notes: type === "sold" ? notes || null : null,
@@ -342,17 +340,6 @@ function QuickEntry() {
                   type="date"
                   value={orderDate}
                   onChange={(e) => setOrderDate(e.target.value)}
-                  className="field focus:field-focus"
-                />
-              </Field>
-              <Field label="Unit price (₹)">
-                <input
-                  type="number"
-                  step="any"
-                  min="0"
-                  value={price}
-                  onChange={(e) => setPrice(e.target.value)}
-                  placeholder="Optional"
                   className="field focus:field-focus"
                 />
               </Field>
