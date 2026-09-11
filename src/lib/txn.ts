@@ -7,7 +7,6 @@ export type TxnRow = {
   occurred_on: string;
   qty: number;
   order_number: string | null;
-  unit_price: number | null;
   condition: string | null;
   notes: string | null;
   reversal_of: string | null;

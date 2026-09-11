@@ -113,7 +113,6 @@ function QuickEntry() {
           channel_id: isSold || isReturn ? channelId || null : null,
           customer_id: (isSold || isReturn) && isB2B ? customerId || null : null,
           order_number: isSold || isReturn ? orderNumber || null : null,
-          unit_price: null,
           condition: isReturn ? condition : null,
           notes: isSold ? notes || null : null,
           invoice_item: isSold ? invoiceItem || null : null,
