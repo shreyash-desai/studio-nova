@@ -2,7 +2,7 @@ import { gatedLoad } from "@/lib/gated";
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
-import { getMasters, createEntry } from "@/lib/api.functions";
+import { getMasters, createEntries } from "@/lib/api.functions";
 import { AppShell } from "@/components/AppShell";
 import { TYPES, TYPE_LABEL, TYPE_SWATCH, UNITS, REASONS, CONDITIONS, todayISO } from "@/lib/txn";
 
@@ -29,6 +29,8 @@ export const Route = createFileRoute("/entry")({
 
 type Master = { id: string; name: string; unit?: string | null };
 
+type EntryItem = { _key: string; itemId: string; qty: string; unit: string; unitTouched: boolean };
+
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="block">
@@ -41,92 +43,103 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 function QuickEntry() {
   const masters = Route.useLoaderData();
   const router = useRouter();
-  const submit = useServerFn(createEntry);
+  const submit = useServerFn(createEntries);
 
   const [type, setType] = useState<(typeof TYPES)[number]>("received");
   const [date, setDate] = useState(todayISO());
   const [addedBy, setAddedBy] = useState((masters as any).operatorId || "");
-  const [itemId, setItemId] = useState("");
-  const [qty, setQty] = useState("");
-  const [unit, setUnit] = useState("");
-  const [unitTouched, setUnitTouched] = useState(false);
+  
+  // Global Fields
   const [channelId, setChannelId] = useState("");
   const [customerId, setCustomerId] = useState("");
   const [orderNumber, setOrderNumber] = useState("");
   const [reason, setReason] = useState(REASONS[0]!);
   const [condition, setCondition] = useState(CONDITIONS[0]!);
   const [notes, setNotes] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [flash, setFlash] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  
   const [invoiceItem, setInvoiceItem] = useState("");
   const [deliveredBy, setDeliveredBy] = useState("");
   const [deliveryRefNo, setDeliveryRefNo] = useState("");
   const [orderDate, setOrderDate] = useState("");
 
-  const isMaterial = type === "received" || type === "used";
-  const items: Master[] = isMaterial ? (masters.materials as Master[]) : (masters.products as Master[]);
-  const isB2B = (masters.channels as Master[]).find((c) => c.id === channelId)?.name?.toLowerCase() === "b2b";
+  // Items
+  const [items, setItems] = useState<EntryItem[]>([{ _key: Math.random().toString(), itemId: "", qty: "", unit: "", unitTouched: false }]);
 
-  const defaultUnit = useMemo(() => {
+  const [busy, setBusy] = useState(false);
+  const [flash, setFlash] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const isMaterial = type === "received" || type === "used";
+  const masterItems: Master[] = isMaterial ? (masters.materials as Master[]) : (masters.products as Master[]);
+  const isB2B = (masters.channels as Master[]).find((c) => c.id === channelId)?.name?.toLowerCase() === "b2b";
+  const isSold = type === "sold";
+  const isReturn = type === "return";
+
+  function getDefaultUnit(itemId: string) {
     if (!isMaterial) return "pcs";
     const m = (masters.materials as Master[]).find((x) => x.id === itemId);
     return m?.unit ?? "";
-  }, [isMaterial, itemId, masters.materials]);
-
-  const effectiveUnit = unitTouched && unit ? unit : defaultUnit;
+  }
 
   function reset(keepType = true) {
     if (!keepType) setType("received");
-    setItemId("");
-    setQty("");
-    setUnit("");
-    setUnitTouched(false);
+    setItems([{ _key: Math.random().toString(), itemId: "", qty: "", unit: "", unitTouched: false }]);
     setOrderNumber("");
     setNotes("");
     setInvoiceItem("");
     setDeliveredBy("");
     setDeliveryRefNo("");
     setOrderDate("");
+    setChannelId("");
+    setCustomerId("");
   }
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    if (!itemId) return setError(isMaterial ? "Choose a material." : "Choose a product.");
-    if (!qty || Number(qty) <= 0) return setError("Enter a quantity greater than zero.");
+    
+    if (isSold) {
+      if (!invoiceItem.trim()) return setError("Invoice Number is required for sold entries.");
+      if (!deliveredBy.trim()) return setError("Delivered By is required for sold entries.");
+      if (!deliveryRefNo.trim()) return setError("Delivery Ref No is required for sold entries.");
+    }
+
+    const validItems = items.filter(i => i.itemId && i.qty && Number(i.qty) > 0);
+    if (validItems.length === 0) return setError("Please add at least one valid item with a quantity greater than zero.");
+
     setBusy(true);
     try {
-      const res = await submit({
-        data: {
+      const payload = validItems.map(item => {
+        const effectiveUnit = item.unitTouched && item.unit ? item.unit : getDefaultUnit(item.itemId);
+        return {
           type,
           occurred_on: date,
           added_by: addedBy || null,
-          product_id: isMaterial ? null : itemId,
-          material_id: isMaterial ? itemId : null,
-          qty: Number(qty),
+          product_id: isMaterial ? null : item.itemId,
+          material_id: isMaterial ? item.itemId : null,
+          qty: Number(item.qty),
           unit: effectiveUnit || "pcs",
-          channel_id: type === "sold" || type === "return" ? channelId || null : null,
-          customer_id: (type === "sold" || type === "return") && isB2B ? customerId || null : null,
-          order_number: type === "sold" || type === "return" ? orderNumber || null : null,
+          channel_id: isSold || isReturn ? channelId || null : null,
+          customer_id: (isSold || isReturn) && isB2B ? customerId || null : null,
+          order_number: isSold || isReturn ? orderNumber || null : null,
           unit_price: null,
           reason: type === "used" ? reason : null,
-          condition: type === "return" ? condition : null,
-          notes: type === "sold" ? notes || null : null,
-          invoice_item: type === "sold" ? invoiceItem || null : null,
-          delivered_by: type === "sold" ? deliveredBy || null : null,
-          delivery_ref_no: type === "sold" ? deliveryRefNo || null : null,
-          order_date: type === "sold" ? orderDate || null : null,
-        },
+          condition: isReturn ? condition : null,
+          notes: isSold ? notes || null : null,
+          invoice_item: isSold ? invoiceItem || null : null,
+          delivered_by: isSold ? deliveredBy || null : null,
+          delivery_ref_no: isSold ? deliveryRefNo || null : null,
+          order_date: isSold ? orderDate || null : null,
+        };
       });
-      if (type === "sold") {
-        router.navigate({ to: "/dispatch/$id", params: { id: res.id } });
-      } else {
-        setFlash(`Saved ${res.ref}`);
-        reset();
-        router.invalidate();
-        setTimeout(() => setFlash(null), 3000);
-      }
+
+      const res = await submit({ data: payload });
+      
+      setFlash(`Saved ${res.length} entries`);
+      reset();
+      router.invalidate();
+      setTimeout(() => setFlash(null), 3000);
+      
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not save the entry.");
     } finally {
@@ -135,7 +148,7 @@ function QuickEntry() {
   }
 
   return (
-    <AppShell title="Quick Entry" subtitle="Pick a movement type, fill three fields, save.">
+    <AppShell title="Quick Entry" subtitle="Pick a movement type, fill fields, and save.">
       <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-5">
         {TYPES.map((t) => {
           const active = t === type;
@@ -148,7 +161,7 @@ function QuickEntry() {
                 reset();
               }}
               className={`panel flex items-center gap-2.5 px-4 py-3.5 text-left transition-colors ${
-                active ? "border-foreground bg-foreground text-background" : "hover:bg-secondary"
+                active ? "border-foreground bg-foreground text-background" : "hover:bg-foreground hover:!text-[var(--background)]"
               }`}
             >
               <span className={`h-2.5 w-2.5 rounded-full ${TYPE_SWATCH[t]}`} />
@@ -158,221 +171,198 @@ function QuickEntry() {
         })}
       </div>
 
-      <form onSubmit={onSubmit} className="panel mt-6 max-w-3xl p-5">
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Date">
-            <input
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              className="field focus:field-focus"
-            />
-          </Field>
-          
-          <Field label="Added by">
-            <select
-              value={addedBy}
-              onChange={(e) => setAddedBy(e.target.value)}
-              className="field focus:field-focus disabled:opacity-70 disabled:bg-secondary disabled:cursor-not-allowed"
-              disabled
-            >
-              <option value="">Select Operator…</option>
-              {((masters as any).operators || []).map((o: any) => (
-                <option key={o.id} value={o.id}>
-                  {o.name}
-                </option>
-              ))}
-            </select>
-          </Field>
-
-          <Field label={isMaterial ? "Material" : "Product"}>
-            <select
-              value={itemId}
-              onChange={(e) => {
-                setItemId(e.target.value);
-                setUnitTouched(false);
-              }}
-              className="field focus:field-focus"
-            >
-              <option value="">Select…</option>
-              {items.map((i) => (
-                <option key={i.id} value={i.id}>
-                  {i.name}
-                </option>
-              ))}
-            </select>
-          </Field>
-
-          <Field label="Quantity">
-            <input
-              type="number"
-              step="any"
-              min="0"
-              value={qty}
-              onChange={(e) => setQty(e.target.value)}
-              placeholder="0"
-              className="field focus:field-focus"
-            />
-          </Field>
-
-          <Field label="Unit">
-            <select
-              value={effectiveUnit}
-              onChange={(e) => {
-                setUnit(e.target.value);
-                setUnitTouched(true);
-              }}
-              className="field focus:field-focus"
-            >
-              <option value="">Select…</option>
-              {UNITS.map((u) => (
-                <option key={u} value={u}>
-                  {u}
-                </option>
-              ))}
-            </select>
-            {isMaterial && defaultUnit && !unitTouched ? (
-              <p className="mt-1 text-[11px] text-muted-foreground">
-                Default unit for this material.
-              </p>
-            ) : null}
-          </Field>
-
-          {type === "used" ? (
-            <Field label="Reason">
+      <form onSubmit={onSubmit} className="mt-6 max-w-4xl space-y-6">
+        
+        {/* Global Details Panel */}
+        <div className="panel p-5">
+          <h2 className="mb-4 text-sm font-bold tracking-tight text-foreground/80 uppercase">Global Details</h2>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Date">
+              <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="field focus:field-focus" />
+            </Field>
+            
+            <Field label="Added by">
               <select
-                value={reason}
-                onChange={(e) => setReason(e.target.value)}
-                className="field focus:field-focus"
+                value={addedBy}
+                onChange={(e) => setAddedBy(e.target.value)}
+                className="field focus:field-focus disabled:opacity-70 disabled:bg-secondary disabled:cursor-not-allowed"
+                disabled
               >
-                {REASONS.map((r) => (
-                  <option key={r}>{r}</option>
+                <option value="">Select Operator…</option>
+                {((masters as any).operators || []).map((o: any) => (
+                  <option key={o.id} value={o.id}>{o.name}</option>
                 ))}
               </select>
             </Field>
-          ) : null}
 
-          {type === "return" ? (
-            <Field label="Condition">
-              <select
-                value={condition}
-                onChange={(e) => setCondition(e.target.value)}
-                className="field focus:field-focus"
-              >
-                {CONDITIONS.map((c) => (
-                  <option key={c}>{c}</option>
-                ))}
-              </select>
-            </Field>
-          ) : null}
-
-          {type === "sold" || type === "return" ? (
-            <>
-              <Field label="Channel">
-                <select
-                  value={channelId}
-                  onChange={(e) => setChannelId(e.target.value)}
-                  className="field focus:field-focus"
-                >
-                  <option value="">Select…</option>
-                  {(masters.channels as Master[]).map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-              {isB2B ? (
-                <Field label="Customer">
-                  <select
-                    value={customerId}
-                    onChange={(e) => setCustomerId(e.target.value)}
-                    className="field focus:field-focus"
-                  >
+            {isSold || isReturn ? (
+              <>
+                <Field label="Channel">
+                  <select value={channelId} onChange={(e) => setChannelId(e.target.value)} className="field focus:field-focus">
                     <option value="">Select…</option>
-                    {(masters.customers as Master[]).map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
+                    {(masters.channels as Master[]).map((c) => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
                     ))}
                   </select>
                 </Field>
-              ) : null}
-              <Field label="Order number">
-                <input
-                  value={orderNumber}
-                  onChange={(e) => setOrderNumber(e.target.value)}
-                  placeholder="Optional"
-                  className="field focus:field-focus"
-                />
-              </Field>
-            </>
-          ) : null}
+                {isB2B ? (
+                  <Field label="Customer">
+                    <select value={customerId} onChange={(e) => setCustomerId(e.target.value)} className="field focus:field-focus">
+                      <option value="">Select…</option>
+                      {(masters.customers as Master[]).map((c) => (
+                        <option key={c.id} value={c.id}>{c.name}</option>
+                      ))}
+                    </select>
+                  </Field>
+                ) : null}
+                <Field label="Order number">
+                  <input value={orderNumber} onChange={(e) => setOrderNumber(e.target.value)} placeholder="Optional" className="field focus:field-focus" />
+                </Field>
+              </>
+            ) : null}
 
-          {type === "sold" ? (
-            <>
-              <Field label="Invoice Item">
-                <input
-                  value={invoiceItem}
-                  onChange={(e) => setInvoiceItem(e.target.value)}
-                  placeholder="Optional"
-                  className="field focus:field-focus"
-                />
+            {isSold ? (
+              <>
+                <Field label="Invoice Number *">
+                  <input value={invoiceItem} onChange={(e) => setInvoiceItem(e.target.value)} placeholder="Required" required className="field focus:field-focus" />
+                </Field>
+                <Field label="Delivery Ref No *">
+                  <input value={deliveryRefNo} onChange={(e) => setDeliveryRefNo(e.target.value)} placeholder="Required" required className="field focus:field-focus" />
+                </Field>
+                <Field label="Delivered By *">
+                  <input value={deliveredBy} onChange={(e) => setDeliveredBy(e.target.value)} placeholder="Required" required className="field focus:field-focus" />
+                </Field>
+                <Field label="Order Date">
+                  <input type="date" value={orderDate} onChange={(e) => setOrderDate(e.target.value)} className="field focus:field-focus" />
+                </Field>
+                <Field label="Notes">
+                  <input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Optional" className="field focus:field-focus" />
+                </Field>
+              </>
+            ) : null}
+
+            {type === "used" ? (
+              <Field label="Reason">
+                <select value={reason} onChange={(e) => setReason(e.target.value)} className="field focus:field-focus">
+                  {REASONS.map((r) => <option key={r}>{r}</option>)}
+                </select>
               </Field>
-              <Field label="Delivered By">
-                <input
-                  value={deliveredBy}
-                  onChange={(e) => setDeliveredBy(e.target.value)}
-                  placeholder="Optional"
-                  className="field focus:field-focus"
-                />
+            ) : null}
+
+            {isReturn ? (
+              <Field label="Condition">
+                <select value={condition} onChange={(e) => setCondition(e.target.value)} className="field focus:field-focus">
+                  {CONDITIONS.map((c) => <option key={c}>{c}</option>)}
+                </select>
               </Field>
-              <Field label="Delivery Ref No">
-                <input
-                  value={deliveryRefNo}
-                  onChange={(e) => setDeliveryRefNo(e.target.value)}
-                  placeholder="Optional"
-                  className="field focus:field-focus"
-                />
-              </Field>
-              <Field label="Order Date">
-                <input
-                  type="date"
-                  value={orderDate}
-                  onChange={(e) => setOrderDate(e.target.value)}
-                  className="field focus:field-focus"
-                />
-              </Field>
-              <Field label="Notes">
-                <input
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Optional"
-                  className="field focus:field-focus"
-                />
-              </Field>
-            </>
-          ) : null}
+            ) : null}
+          </div>
         </div>
 
-        {error ? <p className="mt-4 text-sm font-semibold text-destructive">{error}</p> : null}
-        {flash ? <p className="mt-4 text-sm font-semibold text-received">{flash}</p> : null}
+        {/* Items Panel */}
+        <div className="panel p-5">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-sm font-bold tracking-tight text-foreground/80 uppercase">Items</h2>
+            <button
+              type="button"
+              onClick={() => setItems([...items, { _key: Math.random().toString(), itemId: "", qty: "", unit: "", unitTouched: false }])}
+              className="text-xs font-bold text-accent hover:underline"
+            >
+              + Add Item
+            </button>
+          </div>
+          
+          <div className="space-y-4">
+            {items.map((item, index) => {
+              const defUnit = getDefaultUnit(item.itemId);
+              const effUnit = item.unitTouched && item.unit ? item.unit : defUnit;
 
-        <div className="mt-5 flex items-center gap-3">
+              return (
+                <div key={item._key} className="flex flex-wrap items-end gap-3 rounded-xl border border-border p-4 relative group">
+                  {items.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => setItems(items.filter(i => i._key !== item._key))}
+                      className="absolute -top-2 -right-2 flex h-6 w-6 items-center justify-center rounded-full bg-destructive text-destructive-foreground opacity-0 shadow-sm transition-opacity group-hover:opacity-100"
+                    >
+                      ×
+                    </button>
+                  )}
+                  <div className="flex-1 min-w-[200px]">
+                    <Field label={isMaterial ? "Material" : "Product"}>
+                      <select
+                        value={item.itemId}
+                        onChange={(e) => {
+                          const newItems = [...items];
+                          newItems[index]!.itemId = e.target.value;
+                          newItems[index]!.unitTouched = false;
+                          setItems(newItems);
+                        }}
+                        className="field focus:field-focus"
+                      >
+                        <option value="">Select…</option>
+                        {masterItems.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
+                      </select>
+                    </Field>
+                  </div>
+                  <div className="w-24">
+                    <Field label="Quantity">
+                      <input
+                        type="number"
+                        step="any"
+                        min="0"
+                        value={item.qty}
+                        onChange={(e) => {
+                          const newItems = [...items];
+                          newItems[index]!.qty = e.target.value;
+                          setItems(newItems);
+                        }}
+                        placeholder="0"
+                        className="field focus:field-focus"
+                      />
+                    </Field>
+                  </div>
+                  <div className="w-28">
+                    <Field label="Unit">
+                      <select
+                        value={effUnit}
+                        onChange={(e) => {
+                          const newItems = [...items];
+                          newItems[index]!.unit = e.target.value;
+                          newItems[index]!.unitTouched = true;
+                          setItems(newItems);
+                        }}
+                        className="field focus:field-focus"
+                      >
+                        <option value="">Select…</option>
+                        {UNITS.map((u) => <option key={u} value={u}>{u}</option>)}
+                      </select>
+                    </Field>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {error ? <div className="rounded-xl border border-destructive/20 bg-destructive/10 p-3 text-sm font-semibold text-destructive">{error}</div> : null}
+        
+        <div className="flex items-center gap-4">
           <button
             type="submit"
             disabled={busy}
-            className="rounded-full bg-foreground px-5 py-3 text-sm font-bold text-background shadow transition-all hover:opacity-90 disabled:opacity-50"
+            className="rounded-full bg-foreground px-8 py-3 text-sm font-bold text-background shadow transition-all hover:opacity-90 disabled:opacity-50"
           >
-            {busy ? "Saving…" : `Save ${TYPE_LABEL[type]!.toLowerCase()} entry`}
+            {busy ? "Saving..." : `Save ${type} entry`}
           </button>
           <button
             type="button"
-            onClick={() => reset()}
-            className="rounded-full border border-input px-5 py-3 text-sm font-bold text-muted-foreground transition-all hover:bg-secondary"
+            onClick={() => reset(true)}
+            className="rounded-full border border-input bg-background px-6 py-3 text-sm font-bold text-foreground transition-colors hover:bg-secondary"
           >
             Clear
           </button>
+          {flash ? <span className="text-sm font-semibold text-accent animate-in fade-in">{flash}</span> : null}
         </div>
       </form>
     </AppShell>

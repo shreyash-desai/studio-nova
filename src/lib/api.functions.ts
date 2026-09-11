@@ -99,6 +99,62 @@ export const createEntry = createServerFn({ method: "POST" })
     return inserted;
   });
 
+export const createEntries = createServerFn({ method: "POST" })
+  .inputValidator((data: import("./ledger.server").EntryInput[]) => data)
+  .handler(async ({ data }) => {
+    const { requireUnlocked, db } = await import("./gate.server");
+    const { nextRef, logAudit, todayISO } = await import("./ledger.server");
+    const session = await requireUnlocked();
+    if (!data.length) throw new Error("No entries to save");
+
+    const client = await db();
+    
+    const baseRef = await nextRef("TXN");
+    const prefix = baseRef.slice(0, 9);
+    const startNum = Number(baseRef.split("-").pop());
+    const pad = (n: number) => String(n).padStart(5, "0");
+
+    const rows = data.map((d, index) => {
+      if (!d.qty || Number(d.qty) <= 0) throw new Error("Quantity must be greater than zero");
+      
+      const ref = `${prefix}${pad(startNum + index)}`;
+      return {
+        ref,
+        type: d.type,
+        occurred_on: d.occurred_on || todayISO(),
+        product_id: d.product_id || null,
+        material_id: d.material_id || null,
+        qty: Number(d.qty),
+        unit: (d.unit || null) as never,
+        channel_id: d.channel_id || null,
+        customer_id: d.customer_id || null,
+        order_number: d.order_number || null,
+        unit_price: d.unit_price ?? null,
+        reason: d.reason || null,
+        condition: d.condition || null,
+        notes: d.notes || null,
+        invoice_item: d.type === "sold" ? d.invoice_item || null : null,
+        delivered_by: d.type === "sold" ? d.delivered_by || null : null,
+        delivery_ref_no: d.type === "sold" ? d.delivery_ref_no || null : null,
+        order_date: d.type === "sold" ? d.order_date || null : null,
+        added_by: d.added_by || session.data.operatorId || null,
+      };
+    });
+
+    const { data: inserted, error } = await client
+      .from("transactions")
+      .insert(rows as never)
+      .select("id, ref");
+      
+    if (error) throw new Error(error.message);
+    
+    for (const item of inserted) {
+       await logAudit("create", "transaction", item.id, { ref: item.ref, bulk: true, type: data[0]?.type });
+    }
+    
+    return inserted;
+  });
+
 export const updateEntry = createServerFn({ method: "POST" })
   .inputValidator((data: { id: string; qty?: number; notes?: string | null; order_number?: string | null }) => data)
   .handler(async ({ data }) => {
