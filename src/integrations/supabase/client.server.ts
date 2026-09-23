@@ -30,14 +30,12 @@ function createSupabaseFetch(supabaseKey: string): typeof fetch {
 }
 
 function createSupabaseAdminClient() {
-  const SUPABASE_URL = process.env['SUPABASE_URL']?.trim().replace(/^["']|["']$/g, '');
-  const SUPABASE_SERVICE_ROLE_KEY = process.env['SUPABASE_SERVICE_ROLE_KEY']?.trim().replace(/^["']|["']$/g, '');
+  // Hardcode the URL as a fail-safe since it is constant for this project
+  const SUPABASE_URL = 'https://ohddujncvzsullwyjyaw.supabase.co';
+  let SUPABASE_SERVICE_ROLE_KEY = process.env['SUPABASE_SERVICE_ROLE_KEY']?.trim().replace(/^["']|["']$/g, '');
 
-  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-    const missing = [
-      ...(!SUPABASE_URL ? ['SUPABASE_URL'] : []),
-      ...(!SUPABASE_SERVICE_ROLE_KEY ? ['SUPABASE_SERVICE_ROLE_KEY'] : []),
-    ];
+  if (!SUPABASE_SERVICE_ROLE_KEY) {
+    const missing = ['SUPABASE_SERVICE_ROLE_KEY'];
     const message = `Missing Supabase environment variable(s): ${missing.join(', ')}.`;
     console.error(`[Supabase] ${message}`);
     throw new Error(message);
