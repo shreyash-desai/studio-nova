@@ -11,7 +11,7 @@ export const unlockSite = createServerFn({ method: "POST" })
   .inputValidator((data: { password: string; operatorId: string; operatorName: string; operatorRole: string }) => data)
   .handler(async ({ data }) => {
     const { getGateSession, passwordMatches } = await import("./gate.server");
-    const expected = process.env["SITE_PASSWORD"];
+    const expected = process.env["SITE_PASSWORD"]?.trim().replace(/^["']|["']$/g, '');
     if (!expected) throw new Error("SITE_PASSWORD is not set");
     if (!data.password || !passwordMatches(data.password, expected)) {
       return { ok: false as const };
