@@ -3,7 +3,11 @@ import { createServerFn } from "@tanstack/react-start";
 export const getPublicOperators = createServerFn({ method: "GET" }).handler(async () => {
   const { db } = await import("./gate.server");
   const client = await db();
-  const { data } = await client.from("operators").select("id, name, role").eq("active", true).order("name");
+  const { data, error } = await client.from("operators").select("id, name, role").eq("active", true).order("name");
+  if (error) {
+    console.error("Supabase Error in getPublicOperators:", error);
+    throw new Error("Unable to load operators. Please check the database configuration.");
+  }
   return { operators: data ?? [] };
 });
 
@@ -164,26 +168,19 @@ export const updateEntry = createServerFn({ method: "POST" })
     return { ok: true as const };
   });
 
-export const getEntry = createServerFn({ method: "GET" })
-  .inputValidator((data: { id: string }) => data)
-  .handler(async ({ data }) => {
-    const { requireUnlocked, db } = await import("./gate.server");
-    const { TXN_SELECT } = await import("./ledger.server");
-    await requireUnlocked();
-    const client = await db();
-    const { data: row, error } = await client
-      .from("transactions")
-      .select(TXN_SELECT)
-      .eq("id", data.id)
-      .single();
-    if (error || !row) throw new Error(error?.message ?? "Entry not found");
-    return { row: row as import("./txn").TxnRow };
-  });
 
+
+/**
+ * Invoice-level dispatch update.
+ * Accepts an `invoice_item` string (the invoice number) and synchronises
+ * dispatch fields across ALL sold rows that share that invoice number.
+ * This ensures the dispatch state is always consistent for an entire invoice
+ * regardless of how many product lines it contains.
+ */
 export const updateDispatch = createServerFn({ method: "POST" })
   .inputValidator(
     (data: {
-      id: string;
+      invoice_item: string;
       dispatch_number?: string | null;
       tick_item_photo?: boolean;
       tick_send_tracking?: boolean;
@@ -200,13 +197,40 @@ export const updateDispatch = createServerFn({ method: "POST" })
     if (data.tick_item_photo !== undefined) patch["tick_item_photo"] = data.tick_item_photo;
     if (data.tick_send_tracking !== undefined) patch["tick_send_tracking"] = data.tick_send_tracking;
     if (data.tick_send_invoice !== undefined) patch["tick_send_invoice"] = data.tick_send_invoice;
-    
+
     if (Object.keys(patch).length === 0) return { ok: true as const };
-    
-    const { error } = await client.from("transactions").update(patch as never).eq("id", data.id);
+
+    // Update every sold row that belongs to this invoice in a single query.
+    const { error } = await client
+      .from("transactions")
+      .update(patch as never)
+      .eq("type", "sold")
+      .eq("invoice_item", data.invoice_item);
     if (error) throw new Error(error.message);
-    await logAudit("update", "transaction_dispatch", data.id, patch);
+    await logAudit("update", "invoice_dispatch", null, { invoice_item: data.invoice_item, ...patch });
     return { ok: true as const };
+  });
+
+/**
+ * Fetch all sold rows for a single invoice (identified by invoice_item).
+ * Used by the invoice-level dispatch detail page.
+ */
+export const getInvoiceDispatch = createServerFn({ method: "GET" })
+  .inputValidator((data: { invoice_item: string }) => data)
+  .handler(async ({ data }) => {
+    const { requireUnlocked, db } = await import("./gate.server");
+    const { TXN_SELECT } = await import("./ledger.server");
+    await requireUnlocked();
+    const client = await db();
+    const { data: rows, error } = await client
+      .from("transactions")
+      .select(TXN_SELECT)
+      .eq("type", "sold")
+      .eq("invoice_item", data.invoice_item)
+      .order("created_at", { ascending: true });
+    if (error) throw new Error(error.message);
+    if (!rows || rows.length === 0) throw new Error(`Invoice "${data.invoice_item}" not found`);
+    return { rows: rows as import("./txn").TxnRow[] };
   });
 
 export const reverseEntry = createServerFn({ method: "POST" })
@@ -264,6 +288,7 @@ export const getDayLog = createServerFn({ method: "GET" })
       .from("transactions")
       .select(TXN_SELECT)
       .eq("occurred_on", data.date)
+      .eq("voided", false)
       .order("created_at", { ascending: true });
     const counts = new Map<string, number>();
     for (const row of month) counts.set(row.occurred_on, (counts.get(row.occurred_on) ?? 0) + 1);
@@ -307,7 +332,8 @@ export const searchLedger = createServerFn({ method: "GET" })
     const { data: rows } = await client
       .from("transactions")
       .select(TXN_SELECT)
-      .or(`ref.ilike.%${q}%,order_number.ilike.%${q}%,notes.ilike.%${q}%`)
+      .eq("voided", false)
+      .or(`ref.ilike.%${q}%,order_number.ilike.%${q}%,notes.ilike.%${q}%,invoice_item.ilike.%${q}%`)
       .order("occurred_on", { ascending: false })
       .limit(200);
     return { rows: rows ?? [] };

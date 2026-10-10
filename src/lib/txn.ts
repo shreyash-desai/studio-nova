@@ -20,6 +20,8 @@ export type TxnRow = {
   tick_send_tracking: boolean;
   tick_send_invoice: boolean | null;
   added_by: string | null;
+  unit: string | null;
+  unit_price: number | null;
   product: { id: string; name: string; sku: string | null } | null;
   material: { id: string; name: string } | null;
   channel: { id: string; name: string } | null;

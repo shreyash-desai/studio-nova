@@ -76,6 +76,7 @@ export async function fetchRange(start: string, end: string) {
     .select(TXN_SELECT)
     .gte("occurred_on", start)
     .lte("occurred_on", end)
+    .eq("voided", false)
     .order("occurred_on", { ascending: false })
     .order("created_at", { ascending: false })
     .limit(5000);

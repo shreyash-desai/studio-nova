@@ -5,8 +5,12 @@ import { createHash, timingSafeEqual } from "node:crypto";
 export type GateSession = { unlocked?: boolean; operatorId?: string; operatorName?: string; operatorRole?: string };
 
 function sessionConfig() {
+  const secret = process.env["SESSION_SECRET"]?.trim() || "";
+  if (secret.length < 32) {
+    throw new Error("Server configuration error: SESSION_SECRET is missing or insufficiently strong.");
+  }
   return {
-    password: process.env["SESSION_SECRET"]!,
+    password: secret,
     name: "studio-ledger-gate",
     maxAge: 60 * 60 * 24 * 30,
     cookie: {

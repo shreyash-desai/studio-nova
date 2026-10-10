@@ -46,7 +46,18 @@ function QuickEntry() {
   const submit = useServerFn(createEntries);
 
   const [type, setType] = useState<(typeof TYPES)[number]>("received");
-  const [date, setDate] = useState(todayISO());
+  const [isMultiDate, setIsMultiDate] = useState(false);
+  const [globalDate, setGlobalDate] = useState(todayISO());
+  
+  // Single date mode items
+  const [items, setItems] = useState<EntryItem[]>([{ _key: Math.random().toString(), itemId: "", qty: "" }]);
+  
+  // Multi date mode sections
+  type DateSection = { _key: string; date: string; items: EntryItem[] };
+  const [sections, setSections] = useState<DateSection[]>([
+    { _key: Math.random().toString(), date: todayISO(), items: [{ _key: Math.random().toString(), itemId: "", qty: "" }] }
+  ]);
+
   const [addedBy, setAddedBy] = useState((masters as any).operatorId || "");
   
   // Global Fields
@@ -60,9 +71,6 @@ function QuickEntry() {
   const [deliveredBy, setDeliveredBy] = useState("");
   const [deliveryRefNo, setDeliveryRefNo] = useState("");
 
-  // Items
-  const [items, setItems] = useState<EntryItem[]>([{ _key: Math.random().toString(), itemId: "", qty: "" }]);
-
   const [busy, setBusy] = useState(false);
   const [flash, setFlash] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -73,11 +81,10 @@ function QuickEntry() {
   const isSold = type === "sold";
   const isReturn = type === "return";
 
-
-
   function reset(keepType = true) {
     if (!keepType) setType("received");
     setItems([{ _key: Math.random().toString(), itemId: "", qty: "" }]);
+    setSections([{ _key: Math.random().toString(), date: todayISO(), items: [{ _key: Math.random().toString(), itemId: "", qty: "" }] }]);
     setOrderNumber("");
     setNotes("");
     setInvoiceItem("");
@@ -97,15 +104,15 @@ function QuickEntry() {
       if (!deliveryRefNo.trim()) return setError("Delivery Ref No is required for sold entries.");
     }
 
-    const validItems = items.filter(i => i.itemId && i.qty && Number(i.qty) > 0);
-    if (validItems.length === 0) return setError("Please add at least one valid item with a quantity greater than zero.");
-
-    setBusy(true);
-    try {
-      const payload = validItems.map(item => {
-        return {
+    const payload: any[] = [];
+    
+    if (isMultiDate) {
+      for (const sec of sections) {
+        if (!sec.date) return setError(`Date is missing in a section`);
+        const valid = sec.items.filter((item) => item.itemId && item.qty && Number(item.qty) > 0);
+        payload.push(...valid.map((item) => ({
           type,
-          occurred_on: date,
+          occurred_on: sec.date,
           added_by: addedBy || null,
           product_id: isMaterial ? null : item.itemId,
           material_id: isMaterial ? item.itemId : null,
@@ -118,8 +125,33 @@ function QuickEntry() {
           invoice_item: isSold ? invoiceItem || null : null,
           delivered_by: isSold ? deliveredBy || null : null,
           delivery_ref_no: isSold ? deliveryRefNo || null : null,
-        };
-      });
+        })));
+      }
+    } else {
+      if (!globalDate) return setError("Date is required.");
+      const valid = items.filter((i) => i.itemId && i.qty && Number(i.qty) > 0);
+      payload.push(...valid.map((item) => ({
+          type,
+          occurred_on: globalDate,
+          added_by: addedBy || null,
+          product_id: isMaterial ? null : item.itemId,
+          material_id: isMaterial ? item.itemId : null,
+          qty: Number(item.qty),
+          channel_id: isSold || isReturn ? channelId || null : null,
+          customer_id: (isSold || isReturn) && isB2B ? customerId || null : null,
+          order_number: isSold || isReturn ? orderNumber || null : null,
+          condition: isReturn ? condition : null,
+          notes: isSold ? notes || null : null,
+          invoice_item: isSold ? invoiceItem || null : null,
+          delivered_by: isSold ? deliveredBy || null : null,
+          delivery_ref_no: isSold ? deliveryRefNo || null : null,
+      })));
+    }
+
+    if (payload.length === 0) return setError("Please add at least one valid item with a quantity greater than zero.");
+
+    setBusy(true);
+    try {
 
       const res = await submit({ data: payload });
       
@@ -160,14 +192,22 @@ function QuickEntry() {
       </div>
 
       <form onSubmit={onSubmit} className="mt-6 max-w-4xl space-y-6">
+        <div className="flex items-center gap-4 px-2">
+           <label className="flex items-center gap-2 text-sm font-semibold text-foreground/80 cursor-pointer">
+             <input type="checkbox" checked={isMultiDate} onChange={(e) => setIsMultiDate(e.target.checked)} className="h-4 w-4 rounded border-input" />
+             Multiple Dates Mode
+           </label>
+        </div>
         
         {/* Global Details Panel */}
         <div className="panel p-5">
           <h2 className="mb-4 text-sm font-bold tracking-tight text-foreground/80 uppercase">Global Details</h2>
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Date">
-              <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="field focus:field-focus" />
-            </Field>
+            {!isMultiDate && (
+              <Field label="Date">
+                <input type="date" value={globalDate} onChange={(e) => setGlobalDate(e.target.value)} className="field focus:field-focus" />
+              </Field>
+            )}
             
             <Field label="Added by">
               <select
@@ -238,70 +278,176 @@ function QuickEntry() {
         </div>
 
         {/* Items Panel */}
-        <div className="panel p-5">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-sm font-bold tracking-tight text-foreground/80 uppercase">Items</h2>
+        {!isMultiDate ? (
+          <div className="panel p-5">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-sm font-bold tracking-tight text-foreground/80 uppercase">Items</h2>
+              <button
+                type="button"
+                onClick={() => setItems([...items, { _key: Math.random().toString(), itemId: "", qty: "" }])}
+                className="text-xs font-bold text-accent hover:underline"
+              >
+                + Add Item
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              {items.map((item, index) => {
+                return (
+                  <div key={item._key} className="flex flex-wrap items-end gap-3 rounded-xl border border-border p-4 relative group">
+                    {items.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => setItems(items.filter(i => i._key !== item._key))}
+                        className="absolute -top-2 -right-2 flex h-6 w-6 items-center justify-center rounded-full bg-destructive text-destructive-foreground opacity-0 shadow-sm transition-opacity group-hover:opacity-100"
+                      >
+                        ×
+                      </button>
+                    )}
+                    <div className="flex-1 min-w-[200px]">
+                      <Field label={isMaterial ? "Material" : "Product"}>
+                        <select
+                          value={item.itemId}
+                          onChange={(e) => {
+                            const newItems = [...items];
+                            newItems[index]!.itemId = e.target.value;
+                            setItems(newItems);
+                          }}
+                          className="field focus:field-focus"
+                        >
+                          <option value="">Select…</option>
+                          {masterItems.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
+                        </select>
+                      </Field>
+                    </div>
+                    <div className="w-24">
+                      <Field label="Quantity">
+                        <input
+                          type="number"
+                          step="any"
+                          min="0"
+                          value={item.qty}
+                          onChange={(e) => {
+                            const newItems = [...items];
+                            newItems[index]!.qty = e.target.value;
+                            setItems(newItems);
+                          }}
+                          placeholder="0"
+                          className="field focus:field-focus"
+                        />
+                      </Field>
+                    </div>
+
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {sections.map((section, sIndex) => (
+              <div key={section._key} className="panel p-5 relative border-2 border-foreground/10">
+                {sections.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => setSections(sections.filter(s => s._key !== section._key))}
+                    className="absolute -top-3 -right-3 flex h-8 w-8 items-center justify-center rounded-full bg-destructive text-destructive-foreground shadow transition-transform hover:scale-110"
+                  >
+                    ×
+                  </button>
+                )}
+                <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <h2 className="text-sm font-bold tracking-tight text-foreground/80 uppercase">Section {sIndex + 1}</h2>
+                    <input
+                      type="date"
+                      value={section.date}
+                      onChange={(e) => {
+                        const newSections = [...sections];
+                        newSections[sIndex]!.date = e.target.value;
+                        setSections(newSections);
+                      }}
+                      className="field focus:field-focus py-1 text-sm max-w-[150px]"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newSections = [...sections];
+                      newSections[sIndex]!.items.push({ _key: Math.random().toString(), itemId: "", qty: "" });
+                      setSections(newSections);
+                    }}
+                    className="text-xs font-bold text-accent hover:underline"
+                  >
+                    + Add Item
+                  </button>
+                </div>
+                
+                <div className="space-y-4">
+                  {section.items.map((item, iIndex) => {
+                    return (
+                      <div key={item._key} className="flex flex-wrap items-end gap-3 rounded-xl border border-border p-4 relative group">
+                        {section.items.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const newSections = [...sections];
+                              newSections[sIndex]!.items = section.items.filter(i => i._key !== item._key);
+                              setSections(newSections);
+                            }}
+                            className="absolute -top-2 -right-2 flex h-6 w-6 items-center justify-center rounded-full bg-destructive text-destructive-foreground opacity-0 shadow-sm transition-opacity group-hover:opacity-100"
+                          >
+                            ×
+                          </button>
+                        )}
+                        <div className="flex-1 min-w-[200px]">
+                          <Field label={isMaterial ? "Material" : "Product"}>
+                            <select
+                              value={item.itemId}
+                              onChange={(e) => {
+                                const newSections = [...sections];
+                                newSections[sIndex]!.items[iIndex]!.itemId = e.target.value;
+                                setSections(newSections);
+                              }}
+                              className="field focus:field-focus"
+                            >
+                              <option value="">Select…</option>
+                              {masterItems.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
+                            </select>
+                          </Field>
+                        </div>
+                        <div className="w-24">
+                          <Field label="Quantity">
+                            <input
+                              type="number"
+                              step="any"
+                              min="0"
+                              value={item.qty}
+                              onChange={(e) => {
+                                const newSections = [...sections];
+                                newSections[sIndex]!.items[iIndex]!.qty = e.target.value;
+                                setSections(newSections);
+                              }}
+                              placeholder="0"
+                              className="field focus:field-focus"
+                            />
+                          </Field>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
             <button
               type="button"
-              onClick={() => setItems([...items, { _key: Math.random().toString(), itemId: "", qty: "" }])}
-              className="text-xs font-bold text-accent hover:underline"
+              onClick={() => setSections([...sections, { _key: Math.random().toString(), date: todayISO(), items: [{ _key: Math.random().toString(), itemId: "", qty: "" }] }])}
+              className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border py-4 font-bold text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground"
             >
-              + Add Item
+              + Add Another Date Section
             </button>
           </div>
-          
-          <div className="space-y-4">
-            {items.map((item, index) => {
-              return (
-                <div key={item._key} className="flex flex-wrap items-end gap-3 rounded-xl border border-border p-4 relative group">
-                  {items.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => setItems(items.filter(i => i._key !== item._key))}
-                      className="absolute -top-2 -right-2 flex h-6 w-6 items-center justify-center rounded-full bg-destructive text-destructive-foreground opacity-0 shadow-sm transition-opacity group-hover:opacity-100"
-                    >
-                      ×
-                    </button>
-                  )}
-                  <div className="flex-1 min-w-[200px]">
-                    <Field label={isMaterial ? "Material" : "Product"}>
-                      <select
-                        value={item.itemId}
-                        onChange={(e) => {
-                          const newItems = [...items];
-                          newItems[index]!.itemId = e.target.value;
-                          setItems(newItems);
-                        }}
-                        className="field focus:field-focus"
-                      >
-                        <option value="">Select…</option>
-                        {masterItems.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
-                      </select>
-                    </Field>
-                  </div>
-                  <div className="w-24">
-                    <Field label="Quantity">
-                      <input
-                        type="number"
-                        step="any"
-                        min="0"
-                        value={item.qty}
-                        onChange={(e) => {
-                          const newItems = [...items];
-                          newItems[index]!.qty = e.target.value;
-                          setItems(newItems);
-                        }}
-                        placeholder="0"
-                        className="field focus:field-focus"
-                      />
-                    </Field>
-                  </div>
-
-                </div>
-              );
-            })}
-          </div>
-        </div>
+        )}
 
         {error ? <div className="rounded-xl border border-destructive/20 bg-destructive/10 p-3 text-sm font-semibold text-destructive">{error}</div> : null}
         
@@ -311,7 +457,7 @@ function QuickEntry() {
             disabled={busy}
             className="rounded-full bg-foreground px-8 py-3 text-sm font-bold text-background shadow transition-all hover:opacity-90 disabled:opacity-50"
           >
-            {busy ? "Saving..." : `Save ${type} entry`}
+            {busy ? "Saving..." : isMultiDate ? "Save All Entries" : `Save ${type} entry`}
           </button>
           <button
             type="button"

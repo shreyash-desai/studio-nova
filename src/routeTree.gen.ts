@@ -19,7 +19,7 @@ import { Route as MastersRouteImport } from './routes/masters'
 import { Route as ReportsRouteImport } from './routes/reports'
 import { Route as SearchRouteImport } from './routes/search'
 import { Route as UnlockRouteImport } from './routes/unlock'
-import { Route as DispatchIdRouteImport } from './routes/dispatch.$id'
+import { Route as DispatchInvoiceItemRouteImport } from './routes/dispatch.$invoiceItem'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -71,9 +71,9 @@ const UnlockRoute = UnlockRouteImport.update({
   path: '/unlock',
   getParentRoute: () => rootRouteImport,
 } as any)
-const DispatchIdRoute = DispatchIdRouteImport.update({
-  id: '/dispatch/$id',
-  path: '/dispatch/$id',
+const DispatchInvoiceItemRoute = DispatchInvoiceItemRouteImport.update({
+  id: '/dispatch/$invoiceItem',
+  path: '/dispatch/$invoiceItem',
   getParentRoute: () => rootRouteImport,
 } as any)
 
@@ -88,7 +88,7 @@ export interface FileRoutesByFullPath {
   '/reports': typeof ReportsRoute
   '/search': typeof SearchRoute
   '/unlock': typeof UnlockRoute
-  '/dispatch/$id': typeof DispatchIdRoute
+  '/dispatch/$invoiceItem': typeof DispatchInvoiceItemRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -101,7 +101,7 @@ export interface FileRoutesByTo {
   '/reports': typeof ReportsRoute
   '/search': typeof SearchRoute
   '/unlock': typeof UnlockRoute
-  '/dispatch/$id': typeof DispatchIdRoute
+  '/dispatch/$invoiceItem': typeof DispatchInvoiceItemRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -115,7 +115,7 @@ export interface FileRoutesById {
   '/reports': typeof ReportsRoute
   '/search': typeof SearchRoute
   '/unlock': typeof UnlockRoute
-  '/dispatch/$id': typeof DispatchIdRoute
+  '/dispatch/$invoiceItem': typeof DispatchInvoiceItemRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -130,7 +130,7 @@ export interface FileRouteTypes {
     | '/reports'
     | '/search'
     | '/unlock'
-    | '/dispatch/$id'
+    | '/dispatch/$invoiceItem'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -143,7 +143,7 @@ export interface FileRouteTypes {
     | '/reports'
     | '/search'
     | '/unlock'
-    | '/dispatch/$id'
+    | '/dispatch/$invoiceItem'
   id:
     | '__root__'
     | '/'
@@ -156,7 +156,7 @@ export interface FileRouteTypes {
     | '/reports'
     | '/search'
     | '/unlock'
-    | '/dispatch/$id'
+    | '/dispatch/$invoiceItem'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -170,7 +170,7 @@ export interface RootRouteChildren {
   ReportsRoute: typeof ReportsRoute
   SearchRoute: typeof SearchRoute
   UnlockRoute: typeof UnlockRoute
-  DispatchIdRoute: typeof DispatchIdRoute
+  DispatchInvoiceItemRoute: typeof DispatchInvoiceItemRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -245,11 +245,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof UnlockRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/dispatch/$id': {
-      id: '/dispatch/$id'
-      path: '/dispatch/$id'
-      fullPath: '/dispatch/$id'
-      preLoaderRoute: typeof DispatchIdRouteImport
+    '/dispatch/$invoiceItem': {
+      id: '/dispatch/$invoiceItem'
+      path: '/dispatch/$invoiceItem'
+      fullPath: '/dispatch/$invoiceItem'
+      preLoaderRoute: typeof DispatchInvoiceItemRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -266,7 +266,7 @@ const rootRouteChildren: RootRouteChildren = {
   ReportsRoute: ReportsRoute,
   SearchRoute: SearchRoute,
   UnlockRoute: UnlockRoute,
-  DispatchIdRoute: DispatchIdRoute,
+  DispatchInvoiceItemRoute: DispatchInvoiceItemRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
