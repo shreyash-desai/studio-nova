@@ -20,7 +20,7 @@ export const Route = createFileRoute("/audit")({
   }),
   loader: () => gatedLoad(getAuditLog()),
   errorComponent: ({ error }) => (
-    <div className="px-5 py-24 text-center text-sm text-muted-foreground">{error.message}</div>
+    <div className="px-5 py-24 text-center text-sm text-muted-foreground">{(error as any)?.message || String(error)}</div>
   ),
   component: Audit,
 });

@@ -4,16 +4,17 @@ import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { getInvoiceDispatch, updateDispatch } from "@/lib/api.functions";
 import { AppShell } from "@/components/AppShell";
-import { label, fmtDate, fmtQty, type TxnRow } from "@/lib/txn";
+import { label, fmtDate, fmtQty, parseDispatchMeta, type TxnRow } from "@/lib/txn";
+import { Camera } from "lucide-react";
 
 export const Route = createFileRoute("/dispatch/$invoiceItem")({
-  head: () => ({ meta: [{ title: "Dispatch Detail · Studio Ledger" }] }),
+  head: () => ({ meta: [{ title: "Dispatch Detail · Studio Nova" }] }),
   loader: ({ params }) =>
     gatedLoad(
       getInvoiceDispatch({ data: { invoice_item: decodeURIComponent(params.invoiceItem) } }),
     ),
   errorComponent: ({ error }) => (
-    <div className="px-5 py-24 text-center text-sm text-muted-foreground">{error.message}</div>
+    <div className="px-5 py-24 text-center text-sm text-muted-foreground">{(error as any)?.message || String(error)}</div>
   ),
   component: DispatchDetail,
 });
@@ -26,9 +27,13 @@ function DispatchDetail() {
   // All rows share the same invoice-level dispatch fields — use the first row.
   const rep = rows[0]!;
   const invoiceItem = rep.invoice_item!;
+  const initialMeta = parseDispatchMeta(rep);
 
   const [dispatchNumber, setDispatchNumber] = useState(rep.dispatch_number || "");
-  const [photo, setPhoto] = useState(rep.tick_item_photo || false);
+  const [photo, setPhoto] = useState(rep.tick_item_photo || !!initialMeta.photo_url || false);
+  const [photoUrl, setPhotoUrl] = useState<string | null>(initialMeta.photo_url || null);
+  const [sent, setSent] = useState(initialMeta.tick_sent || false);
+  const [isReturn, setIsReturn] = useState(initialMeta.tick_return || false);
   const [tracking, setTracking] = useState(rep.tick_send_tracking || false);
   const [invoiceSent, setInvoiceSent] = useState(rep.tick_send_invoice || false);
   const [busy, setBusy] = useState(false);
@@ -42,7 +47,10 @@ function DispatchDetail() {
         data: {
           invoice_item: invoiceItem,
           dispatch_number: dispatchNumber,
-          tick_item_photo: photo,
+          tick_item_photo: photo || !!photoUrl,
+          photo_url: photoUrl,
+          tick_sent: sent,
+          tick_return: isReturn,
           tick_send_tracking: tracking,
           tick_send_invoice: invoiceSent,
         },
@@ -157,7 +165,7 @@ function DispatchDetail() {
           <h3 className="mb-4 font-display text-lg font-bold">Dispatch Checklist</h3>
           <p className="mb-5 text-xs text-muted-foreground">
             These settings apply to all {rows.length} item{rows.length !== 1 ? "s" : ""} in this invoice.
-            Saving once updates the entire invoice.
+            Saving once synchronises the entire invoice.
           </p>
 
           <label className="block mb-5">
@@ -165,38 +173,75 @@ function DispatchDetail() {
             <input
               value={dispatchNumber}
               onChange={(e) => setDispatchNumber(e.target.value)}
-              placeholder="Enter docket or tracking number…"
+              placeholder="Enter docket, AWB, or tracking number…"
               className="field focus:field-focus"
             />
           </label>
 
-          <div className="space-y-3">
-            <label className="flex items-center gap-3 cursor-pointer">
+          {/* Photo Button (Placeholder, does not work per request) */}
+          <div className="mb-6 rounded-xl border border-border p-4 bg-secondary/30 flex items-center justify-between">
+            <div>
+              <span className="label-plain block">Checkout Parcel Photo</span>
+              <p className="text-xs text-muted-foreground mt-0.5">Photo verification</p>
+            </div>
+            <button
+              type="button"
+              disabled
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-full border border-input text-muted-foreground bg-secondary/50 cursor-not-allowed opacity-75"
+              title="Photo placeholder"
+            >
+              <Camera className="w-3.5 h-3.5" />
+              <span>Photo</span>
+            </button>
+          </div>
+
+          <div className="space-y-3.5">
+            {/* Sent Ka Tick */}
+            <label className="flex items-center gap-3 cursor-pointer p-2 rounded-lg hover:bg-secondary/40 transition-colors">
               <input
                 type="checkbox"
-                checked={photo}
-                onChange={(e) => setPhoto(e.target.checked)}
-                className="h-5 w-5 rounded border-input text-foreground focus:ring-foreground"
+                checked={sent}
+                onChange={(e) => setSent(e.target.checked)}
+                className="h-5 w-5 rounded border-input accent-green-600 focus:ring-green-600"
               />
-              <span className="text-sm font-medium">Item Photo Taken</span>
+              <div>
+                <span className="text-sm font-bold text-foreground">Sent / Dispatched ✓</span>
+                <p className="text-xs text-muted-foreground">Order has been packed and handed over to courier / transport</p>
+              </div>
             </label>
-            <label className="flex items-center gap-3 cursor-pointer">
+
+            {/* Return Ka Tick */}
+            <label className="flex items-center gap-3 cursor-pointer p-2 rounded-lg hover:bg-secondary/40 transition-colors">
+              <input
+                type="checkbox"
+                checked={isReturn}
+                onChange={(e) => setIsReturn(e.target.checked)}
+                className="h-5 w-5 rounded border-input accent-red-600 focus:ring-red-600"
+              />
+              <div>
+                <span className="text-sm font-bold text-destructive">Return ✗</span>
+                <p className="text-xs text-muted-foreground">Flag this order as returned by customer or logistics</p>
+              </div>
+            </label>
+
+            <label className="flex items-center gap-3 cursor-pointer p-2 rounded-lg hover:bg-secondary/40 transition-colors">
               <input
                 type="checkbox"
                 checked={tracking}
                 onChange={(e) => setTracking(e.target.checked)}
                 className="h-5 w-5 rounded border-input text-foreground focus:ring-foreground"
               />
-              <span className="text-sm font-medium">Tracking Sent</span>
+              <span className="text-sm font-medium">Tracking Link Sent</span>
             </label>
-            <label className="flex items-center gap-3 cursor-pointer">
+
+            <label className="flex items-center gap-3 cursor-pointer p-2 rounded-lg hover:bg-secondary/40 transition-colors">
               <input
                 type="checkbox"
                 checked={invoiceSent}
                 onChange={(e) => setInvoiceSent(e.target.checked)}
                 className="h-5 w-5 rounded border-input text-foreground focus:ring-foreground"
               />
-              <span className="text-sm font-medium">Invoice Sent</span>
+              <span className="text-sm font-medium">Invoice Document Sent</span>
             </label>
           </div>
 
@@ -204,13 +249,13 @@ function DispatchDetail() {
             <button
               type="submit"
               disabled={busy}
-              className="rounded bg-foreground px-5 py-2.5 text-sm font-semibold text-background hover:opacity-90 disabled:opacity-50"
+              className="rounded-full bg-foreground px-6 py-2.5 text-sm font-bold text-background hover:opacity-90 disabled:opacity-50 shadow-sm transition-all"
             >
               {busy ? "Saving…" : "Save Dispatch Details"}
             </button>
             {flash ? (
               <span
-                className={`text-sm font-semibold ${flash.startsWith("Could") ? "text-destructive" : "text-received"}`}
+                className={`text-sm font-semibold ${flash.startsWith("Could") ? "text-destructive" : "text-green-600"}`}
               >
                 {flash}
               </span>

@@ -4,7 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
 import { getMasters, createEntries } from "@/lib/api.functions";
 import { AppShell } from "@/components/AppShell";
-import { TYPES, TYPE_LABEL, TYPE_SWATCH, CONDITIONS, todayISO } from "@/lib/txn";
+import { TYPES, TYPE_LABEL, TYPE_SWATCH, CONDITIONS, todayISO, isOnlineChannel } from "@/lib/txn";
 
 export const Route = createFileRoute("/entry")({
   head: () => ({
@@ -22,7 +22,7 @@ export const Route = createFileRoute("/entry")({
   }),
   loader: () => gatedLoad(getMasters()),
   errorComponent: ({ error }) => (
-    <div className="px-5 py-24 text-center text-sm text-muted-foreground">{error.message}</div>
+    <div className="px-5 py-24 text-center text-sm text-muted-foreground">{(error as any)?.message || String(error)}</div>
   ),
   component: QuickEntry,
 });
@@ -70,6 +70,7 @@ function QuickEntry() {
   const [invoiceItem, setInvoiceItem] = useState("");
   const [deliveredBy, setDeliveredBy] = useState("");
   const [deliveryRefNo, setDeliveryRefNo] = useState("");
+  const [dispatchNumber, setDispatchNumber] = useState("");
 
   const [busy, setBusy] = useState(false);
   const [flash, setFlash] = useState<string | null>(null);
@@ -77,7 +78,10 @@ function QuickEntry() {
 
   const isMaterial = type === "received" || type === "used";
   const masterItems: Master[] = isMaterial ? (masters.materials as Master[]) : (masters.products as Master[]);
-  const isB2B = (masters.channels as Master[]).find((c) => c.id === channelId)?.name?.toLowerCase() === "b2b";
+  const selectedChannel = (masters.channels as Master[]).find((c) => c.id === channelId);
+  const selectedChannelName = selectedChannel?.name || "";
+  const isOnline = isOnlineChannel(selectedChannelName);
+  const isB2B = !isOnline;
   const isSold = type === "sold";
   const isReturn = type === "return";
 
@@ -90,6 +94,7 @@ function QuickEntry() {
     setInvoiceItem("");
     setDeliveredBy("");
     setDeliveryRefNo("");
+    setDispatchNumber("");
     setChannelId("");
     setCustomerId("");
   }
@@ -99,9 +104,12 @@ function QuickEntry() {
     setError(null);
     
     if (isSold) {
-      if (!invoiceItem.trim()) return setError("Invoice Number is required for sold entries.");
-      if (!deliveredBy.trim()) return setError("Delivered By is required for sold entries.");
-      if (!deliveryRefNo.trim()) return setError("Delivery Ref No is required for sold entries.");
+      if (!channelId) return setError("Please select a sales Channel.");
+      if (!isOnline) {
+        if (!invoiceItem.trim()) return setError("Invoice Number is required for B2B & other sales.");
+      } else {
+        if (!orderNumber.trim()) return setError("Order Number is required for online marketplace sales.");
+      }
     }
 
     const payload: any[] = [];
@@ -118,13 +126,14 @@ function QuickEntry() {
           material_id: isMaterial ? item.itemId : null,
           qty: Number(item.qty),
           channel_id: isSold || isReturn ? channelId || null : null,
-          customer_id: (isSold || isReturn) && isB2B ? customerId || null : null,
+          customer_id: (isSold || isReturn) && !isOnline ? customerId || null : null,
           order_number: isSold || isReturn ? orderNumber || null : null,
           condition: isReturn ? condition : null,
           notes: isSold ? notes || null : null,
-          invoice_item: isSold ? invoiceItem || null : null,
-          delivered_by: isSold ? deliveredBy || null : null,
-          delivery_ref_no: isSold ? deliveryRefNo || null : null,
+          invoice_item: isSold && !isOnline ? invoiceItem || null : null,
+          delivered_by: isSold && !isOnline ? deliveredBy || null : null,
+          delivery_ref_no: isSold && !isOnline ? deliveryRefNo || null : null,
+          dispatch_number: isSold && isOnline ? dispatchNumber || null : null,
         })));
       }
     } else {
@@ -138,13 +147,14 @@ function QuickEntry() {
           material_id: isMaterial ? item.itemId : null,
           qty: Number(item.qty),
           channel_id: isSold || isReturn ? channelId || null : null,
-          customer_id: (isSold || isReturn) && isB2B ? customerId || null : null,
+          customer_id: (isSold || isReturn) && !isOnline ? customerId || null : null,
           order_number: isSold || isReturn ? orderNumber || null : null,
           condition: isReturn ? condition : null,
           notes: isSold ? notes || null : null,
-          invoice_item: isSold ? invoiceItem || null : null,
-          delivered_by: isSold ? deliveredBy || null : null,
-          delivery_ref_no: isSold ? deliveryRefNo || null : null,
+          invoice_item: isSold && !isOnline ? invoiceItem || null : null,
+          delivered_by: isSold && !isOnline ? deliveredBy || null : null,
+          delivery_ref_no: isSold && !isOnline ? deliveryRefNo || null : null,
+          dispatch_number: isSold && isOnline ? dispatchNumber || null : null,
       })));
     }
 
@@ -227,43 +237,58 @@ function QuickEntry() {
               <>
                 <Field label="Channel">
                   <select value={channelId} onChange={(e) => setChannelId(e.target.value)} className="field focus:field-focus">
-                    <option value="">Select…</option>
+                    <option value="">Select Channel…</option>
                     {(masters.channels as Master[]).map((c) => (
                       <option key={c.id} value={c.id}>{c.name}</option>
                     ))}
                   </select>
                 </Field>
-                {isB2B ? (
+                {!isOnline ? (
                   <Field label="Customer">
                     <select value={customerId} onChange={(e) => setCustomerId(e.target.value)} className="field focus:field-focus">
-                      <option value="">Select…</option>
+                      <option value="">Select Customer…</option>
                       {(masters.customers as Master[]).map((c) => (
                         <option key={c.id} value={c.id}>{c.name}</option>
                       ))}
                     </select>
                   </Field>
                 ) : null}
-                <Field label="Order number">
-                  <input value={orderNumber} onChange={(e) => setOrderNumber(e.target.value)} placeholder="Optional" className="field focus:field-focus" />
+                <Field label={`Order number ${isOnline ? "*" : "(Optional)"}`}>
+                  <input
+                    value={orderNumber}
+                    onChange={(e) => setOrderNumber(e.target.value)}
+                    placeholder={isOnline ? "Marketplace Order ID" : "Optional"}
+                    className="field focus:field-focus"
+                    required={isOnline}
+                  />
                 </Field>
               </>
             ) : null}
 
-            {isSold ? (
+            {isSold && !isOnline ? (
               <>
                 <Field label="Invoice Number *">
-                  <input value={invoiceItem} onChange={(e) => setInvoiceItem(e.target.value)} placeholder="Required" required className="field focus:field-focus" />
+                  <input value={invoiceItem} onChange={(e) => setInvoiceItem(e.target.value)} placeholder="Required for B2B / Others" required className="field focus:field-focus" />
                 </Field>
-                <Field label="Delivery Ref No *">
-                  <input value={deliveryRefNo} onChange={(e) => setDeliveryRefNo(e.target.value)} placeholder="Required" required className="field focus:field-focus" />
+                <Field label="Delivery Ref No">
+                  <input value={deliveryRefNo} onChange={(e) => setDeliveryRefNo(e.target.value)} placeholder="Optional" className="field focus:field-focus" />
                 </Field>
-                <Field label="Delivered By *">
-                  <input value={deliveredBy} onChange={(e) => setDeliveredBy(e.target.value)} placeholder="Required" required className="field focus:field-focus" />
-                </Field>
-                <Field label="Notes">
-                  <input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Optional" className="field focus:field-focus" />
+                <Field label="Delivered By">
+                  <input value={deliveredBy} onChange={(e) => setDeliveredBy(e.target.value)} placeholder="Driver / Courier" className="field focus:field-focus" />
                 </Field>
               </>
+            ) : null}
+
+            {isSold && isOnline ? (
+              <Field label="Tracking ID / AWB (Optional)">
+                <input value={dispatchNumber} onChange={(e) => setDispatchNumber(e.target.value)} placeholder="Can also add on Dispatch board" className="field focus:field-focus" />
+              </Field>
+            ) : null}
+
+            {isSold ? (
+              <Field label="Notes">
+                <input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Optional" className="field focus:field-focus" />
+              </Field>
             ) : null}
 
 

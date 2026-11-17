@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { getLedger } from "@/lib/api.functions";
 import { AppShell } from "@/components/AppShell";
 import { Stat, EmptyState } from "@/components/ledger-ui";
-import { TYPES, TYPE_LABEL, TYPE_SWATCH, fmtMoney, fmtQty, label, todayISO, type TxnRow } from "@/lib/txn";
+import { TYPES, TYPE_LABEL, TYPE_SWATCH, fmtMoney, fmtQty, label, todayISO, isCustom3D, type TxnRow } from "@/lib/txn";
 
 function monthStart() {
   return todayISO().slice(0, 7) + "-01";
@@ -31,7 +31,7 @@ export const Route = createFileRoute("/reports")({
   loaderDeps: ({ search }) => ({ start: search.start ?? monthStart(), end: search.end ?? todayISO() }),
   loader: ({ deps }) => gatedLoad(getLedger({ data: deps })),
   errorComponent: ({ error }) => (
-    <div className="px-5 py-24 text-center text-sm text-muted-foreground">{error.message}</div>
+    <div className="px-5 py-24 text-center text-sm text-muted-foreground">{(error as any)?.message || String(error)}</div>
   ),
   component: Reports,
 });
@@ -92,7 +92,8 @@ function Reports() {
     [rows],
   );
 
-  const sold = rows.filter((r) => r.type === "sold");
+  const standardSold = rows.filter((r) => r.type === "sold" && !isCustom3D(r));
+  const custom3dSold = rows.filter((r) => r.type === "sold" && isCustom3D(r));
   const printed = rows.filter((r) => r.type === "printed");
   const used = rows.filter((r) => r.type === "used");
 
@@ -126,24 +127,36 @@ function Reports() {
         <EmptyState>No entries in this range.</EmptyState>
       ) : (
         <>
-          <section className="grid gap-3 sm:grid-cols-3 lg:grid-cols-6">
-            {TYPES.map((t) => (
-              <Stat
-                key={t}
-                label={TYPE_LABEL[t]!}
-                value={fmtQty(rows.filter((r) => r.type === t).reduce((a, r) => a + Number(r.qty), 0))}
-                accent={TYPE_SWATCH[t]}
-              />
-            ))}
-            <Stat label="Revenue" value={fmtMoney(revenue)} />
+          <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <Stat
+              label="Sold (Catalog)"
+              value={fmtQty(standardSold.reduce((a, r) => a + Number(r.qty), 0))}
+              accent="bg-sold"
+              hint={custom3dSold.length > 0 ? `Excludes ${custom3dSold.reduce((a, r) => a + Number(r.qty), 0)} Custom 3D units` : "Excludes Custom 3D"}
+            />
+            <Stat
+              label="Printed (Production)"
+              value={fmtQty(printed.reduce((a, r) => a + Number(r.qty), 0))}
+              accent="bg-printed"
+            />
+            <Stat
+              label="Material Used"
+              value={fmtQty(used.reduce((a, r) => a + Number(r.qty), 0))}
+              accent="bg-used"
+            />
+            <Stat
+              label="Returns"
+              value={fmtQty(rows.filter((r) => r.type === "return").reduce((a, r) => a + Number(r.qty), 0))}
+              accent="bg-return"
+            />
           </section>
 
           <section className="mt-8 grid gap-4 lg:grid-cols-3">
-            <RankList title="Top products sold" items={rank(sold, (r) => label(r))} />
+            <RankList title="Top catalog products sold" items={rank(standardSold, (r) => label(r))} />
             <RankList title="Most printed" items={rank(printed, (r) => label(r))} />
             <RankList title="Materials consumed" items={rank(used, (r) => label(r))} />
-            <RankList title="Sales by channel" items={rank(sold, (r) => r.channel?.name ?? "")} />
-            <RankList title="Sales by customer" items={rank(sold, (r) => r.customer?.name ?? "")} />
+            <RankList title="Sales by channel" items={rank(standardSold, (r) => r.channel?.name ?? "")} />
+            <RankList title="Sales by customer" items={rank(standardSold, (r) => r.customer?.name ?? "")} />
             <RankList
               title="Returns by reason"
               items={rank(

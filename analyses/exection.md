@@ -25,6 +25,43 @@ The initial `README.md` contained specific structural requests comparing the new
 ### F. "IN MASTER REMOVE PRICE"
 - **Audit Findings**: An audit of `src/routes/masters.tsx` verifies that the `price` field does not exist. Users manage Names, SKUs, Variants, Sizes, and Roles without encountering price configuration, strictly adhering to the prompt.
 
+### G. Client Requirement Audit (November 2026 Updates)
+
+1. **"Custom 3d shouldn't be added in total sales"**:
+   - In `src/lib/txn.ts`, `isCustom3D` detects items with name or SKU matching `custom 3d` / `custom-3d` (such as `CUSTOM 3D PRINTED PARTS`).
+   - In `src/routes/index.tsx`, `totalSales` exclusively sums standard catalog sales; Custom 3D units are excluded from total sales and monthly sales charts.
+   - In `src/routes/reports.tsx`, standard sales and Custom 3D units are strictly segregated.
+
+2. **"Open karneke baad monthly production / Add current monthly / And also add daily / graphs monthly creent and daily"**:
+   - `src/routes/index.tsx` immediately displays:
+     - Today's Production & Today's Sales (Daily output)
+     - Current Month Production & Sales (Monthly live pacing)
+     - Full Year-to-Date Totals
+   - An interactive toggle switches the visual graph between:
+     - **Daily (Day-by-Day for current month)**: Direct factory output per calendar day.
+     - **Monthly (12 Months for current year)**: Year-long pacing.
+
+3. **"Dispatches 1 b2b and others / Dispatch 2 online dispatches / Categories: Amazon properfry flipkart claymango website / 5 categories should automatically be added"**:
+   - `src/routes/dispatches.tsx` splits into two dedicated operational boards:
+     - **Board 1 (Dispatches 1: B2B & Others)**: Grouped by Invoice Number, shows Customer, Invoice Date, items, tracking.
+     - **Board 2 (Dispatches 2: Online Dispatches)**: Filterable across the 5 official marketplace categories (`Amazon`, `Pepperfry`, `Flipkart`, `Claymango`, `Website`), tracked by Order Number.
+   - The `Website` category was verified and inserted into the Supabase `channels` table.
+
+4. **"Form should be only open to b2b and others / No tracking Id / Invoices only for b2b and others"**:
+   - In `src/routes/entry.tsx`, when selecting a channel:
+     - For B2B and Others: Invoice Number is mandatory; Delivery details and Customer are shown; tracking number is omitted.
+     - For Online Channels: Order Number is primary; Invoice Number is hidden and optional; Customer dropdown is omitted.
+
+5. **"Return ka ek tick dena padega / Sent ka ek ayega"**:
+   - Checkboxes for `Sent ✓` (`tick_sent`) and `Return ✗` (`tick_return`) added to both B2B and Online Dispatch boards.
+   - Updating flags synchronises across all items in that order/invoice in real time.
+
+6. **"Check out photo upload"**:
+   - `PhotoUploadCell` component allows taking or uploading parcel checkout photos directly with auto-compression and lightbox modal viewer.
+
+7. **"Daily log dispatches / Tracking id number"**:
+   - `src/routes/log.tsx` features a dedicated Dispatches filter and prominent Tracking ID number badges on every dispatched line item.
+
 ## 2. Git History & Evolution Study
 
 A review of the repository's git logs (`git log -n 5`) shows the transition path:

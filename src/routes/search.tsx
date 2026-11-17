@@ -25,7 +25,7 @@ export const Route = createFileRoute("/search")({
   loaderDeps: ({ search }) => ({ q: search.q ?? "" }),
   loader: ({ deps }) => gatedLoad(searchLedger({ data: { q: deps.q } })),
   errorComponent: ({ error }) => (
-    <div className="px-5 py-24 text-center text-sm text-muted-foreground">{error.message}</div>
+    <div className="px-5 py-24 text-center text-sm text-muted-foreground">{(error as any)?.message || String(error)}</div>
   ),
   component: SearchPage,
 });

@@ -88,19 +88,30 @@ export function TxnTable({
                 {fmtQty(r.qty)}
               </td>
               <td className="px-4 py-3 text-xs text-muted-foreground">
-                {[
-                  r.channel?.name,
-                  r.customer?.name,
-                  r.order_number,
-                  r.condition,
-                  r.invoice_item,
-                  r.delivered_by,
-                  r.delivery_ref_no,
-                  r.notes,
-                  r.operator ? `Added by ${r.operator.name}` : undefined,
-                ]
-                  .filter(Boolean)
-                  .join(" · ") || "—"}
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {r.dispatch_number && (
+                    <span className="inline-flex items-center gap-1 font-mono font-bold text-[11px] text-foreground bg-secondary px-2 py-0.5 rounded-full border border-border">
+                      📦 Tracking: {r.dispatch_number}
+                    </span>
+                  )}
+                  {r.invoice_item && (
+                    <span className="font-mono font-semibold text-foreground">
+                      Inv #{r.invoice_item}
+                    </span>
+                  )}
+                  {[
+                    r.channel?.name,
+                    r.customer?.name,
+                    r.order_number ? `Order #${r.order_number}` : undefined,
+                    r.condition,
+                    r.delivered_by ? `Via ${r.delivered_by}` : undefined,
+                    r.delivery_ref_no,
+                    r.notes,
+                    r.operator ? `Added by ${r.operator.name}` : undefined,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ") || (r.dispatch_number || r.invoice_item ? "" : "—")}
+                </div>
               </td>
               {onReverse ? (
                 <td className="px-4 py-3 text-right">

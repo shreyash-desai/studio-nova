@@ -12,7 +12,7 @@ export const getPublicOperators = createServerFn({ method: "GET" }).handler(asyn
 });
 
 export const unlockSite = createServerFn({ method: "POST" })
-  .inputValidator((data: { password: string; operatorId: string; operatorName: string; operatorRole: string }) => data)
+  .validator((data: { password: string; operatorId: string; operatorName: string; operatorRole: string }) => data)
   .handler(async ({ data }) => {
     const { getGateSession, passwordMatches } = await import("./gate.server");
     const expected = process.env["SITE_PASSWORD"]?.trim().replace(/^["']|["']$/g, '');
@@ -64,7 +64,7 @@ export const getMasters = createServerFn({ method: "GET" }).handler(async () => 
 });
 
 export const createEntry = createServerFn({ method: "POST" })
-  .inputValidator((data: import("./ledger.server").EntryInput) => data)
+  .validator((data: import("./ledger.server").EntryInput) => data)
   .handler(async ({ data }) => {
     const { requireUnlocked, db } = await import("./gate.server");
     const { nextRef, logAudit, todayISO } = await import("./ledger.server");
@@ -87,6 +87,7 @@ export const createEntry = createServerFn({ method: "POST" })
       invoice_item: data.type === "sold" ? data.invoice_item || null : null,
       delivered_by: data.type === "sold" ? data.delivered_by || null : null,
       delivery_ref_no: data.type === "sold" ? data.delivery_ref_no || null : null,
+      dispatch_number: data.type === "sold" ? data.dispatch_number || null : null,
       added_by: data.added_by || session.data.operatorId || null,
     };
     const { data: inserted, error } = await client
@@ -100,7 +101,7 @@ export const createEntry = createServerFn({ method: "POST" })
   });
 
 export const createEntries = createServerFn({ method: "POST" })
-  .inputValidator((data: import("./ledger.server").EntryInput[]) => data)
+  .validator((data: import("./ledger.server").EntryInput[]) => data)
   .handler(async ({ data }) => {
     const { requireUnlocked, db } = await import("./gate.server");
     const { nextRef, logAudit, todayISO } = await import("./ledger.server");
@@ -133,6 +134,7 @@ export const createEntries = createServerFn({ method: "POST" })
         invoice_item: d.type === "sold" ? d.invoice_item || null : null,
         delivered_by: d.type === "sold" ? d.delivered_by || null : null,
         delivery_ref_no: d.type === "sold" ? d.delivery_ref_no || null : null,
+        dispatch_number: d.type === "sold" ? d.dispatch_number || null : null,
         added_by: d.added_by || session.data.operatorId || null,
       };
     });
@@ -152,7 +154,7 @@ export const createEntries = createServerFn({ method: "POST" })
   });
 
 export const updateEntry = createServerFn({ method: "POST" })
-  .inputValidator((data: { id: string; qty?: number; notes?: string | null; order_number?: string | null }) => data)
+  .validator((data: { id: string; qty?: number; notes?: string | null; order_number?: string | null }) => data)
   .handler(async ({ data }) => {
     const { requireUnlocked, db } = await import("./gate.server");
     const { logAudit } = await import("./ledger.server");
@@ -171,20 +173,23 @@ export const updateEntry = createServerFn({ method: "POST" })
 
 
 /**
- * Invoice-level dispatch update.
- * Accepts an `invoice_item` string (the invoice number) and synchronises
- * dispatch fields across ALL sold rows that share that invoice number.
- * This ensures the dispatch state is always consistent for an entire invoice
- * regardless of how many product lines it contains.
+ * Dispatch update.
+ * Synchronises dispatch fields across all sold rows that share the same invoice_item,
+ * or updates by specific transaction id or order_number (e.g. for online marketplace dispatches).
  */
 export const updateDispatch = createServerFn({ method: "POST" })
-  .inputValidator(
+  .validator(
     (data: {
-      invoice_item: string;
+      invoice_item?: string | null;
+      id?: string | null;
+      order_number?: string | null;
       dispatch_number?: string | null;
       tick_item_photo?: boolean;
       tick_send_tracking?: boolean;
       tick_send_invoice?: boolean;
+      tick_sent?: boolean;
+      tick_return?: boolean;
+      photo_url?: string | null;
     }) => data,
   )
   .handler(async ({ data }) => {
@@ -198,16 +203,44 @@ export const updateDispatch = createServerFn({ method: "POST" })
     if (data.tick_send_tracking !== undefined) patch["tick_send_tracking"] = data.tick_send_tracking;
     if (data.tick_send_invoice !== undefined) patch["tick_send_invoice"] = data.tick_send_invoice;
 
+    // Fetch existing reason to store metadata if needed
+    let query = client.from("transactions").select("id, reason").eq("type", "sold");
+    if (data.invoice_item) {
+      query = query.eq("invoice_item", data.invoice_item);
+    } else if (data.id) {
+      query = query.eq("id", data.id);
+    } else if (data.order_number) {
+      query = query.eq("order_number", data.order_number);
+    }
+
+    const { data: existingRows } = await query;
+    const existingReason = existingRows?.[0]?.reason;
+    let meta: Record<string, unknown> = {};
+    if (existingReason && existingReason.startsWith("{") && existingReason.endsWith("}")) {
+      try { meta = JSON.parse(existingReason); } catch {}
+    }
+    if (data.tick_sent !== undefined) meta["tick_sent"] = data.tick_sent;
+    if (data.tick_return !== undefined) meta["tick_return"] = data.tick_return;
+    if (data.photo_url !== undefined) meta["photo_url"] = data.photo_url;
+
+    if (Object.keys(meta).length > 0) {
+      patch["reason"] = JSON.stringify(meta);
+    }
+
     if (Object.keys(patch).length === 0) return { ok: true as const };
 
-    // Update every sold row that belongs to this invoice in a single query.
-    const { error } = await client
-      .from("transactions")
-      .update(patch as never)
-      .eq("type", "sold")
-      .eq("invoice_item", data.invoice_item);
+    let updateQuery = client.from("transactions").update(patch as never).eq("type", "sold");
+    if (data.invoice_item) {
+      updateQuery = updateQuery.eq("invoice_item", data.invoice_item);
+    } else if (data.id) {
+      updateQuery = updateQuery.eq("id", data.id);
+    } else if (data.order_number) {
+      updateQuery = updateQuery.eq("order_number", data.order_number);
+    }
+
+    const { error } = await updateQuery;
     if (error) throw new Error(error.message);
-    await logAudit("update", "invoice_dispatch", null, { invoice_item: data.invoice_item, ...patch });
+    await logAudit("update", "dispatch", data.id || data.invoice_item || data.order_number || null, patch);
     return { ok: true as const };
   });
 
@@ -216,7 +249,7 @@ export const updateDispatch = createServerFn({ method: "POST" })
  * Used by the invoice-level dispatch detail page.
  */
 export const getInvoiceDispatch = createServerFn({ method: "GET" })
-  .inputValidator((data: { invoice_item: string }) => data)
+  .validator((data: { invoice_item: string }) => data)
   .handler(async ({ data }) => {
     const { requireUnlocked, db } = await import("./gate.server");
     const { TXN_SELECT } = await import("./ledger.server");
@@ -234,7 +267,7 @@ export const getInvoiceDispatch = createServerFn({ method: "GET" })
   });
 
 export const reverseEntry = createServerFn({ method: "POST" })
-  .inputValidator((data: { id: string; note?: string }) => data)
+  .validator((data: { id: string; note?: string }) => data)
   .handler(async ({ data }) => {
     const { requireUnlocked, db } = await import("./gate.server");
     const { nextRef, logAudit } = await import("./ledger.server");
@@ -276,7 +309,7 @@ export const reverseEntry = createServerFn({ method: "POST" })
   });
 
 export const getDayLog = createServerFn({ method: "GET" })
-  .inputValidator((data: { month: string; date: string }) => data)
+  .validator((data: { month: string; date: string }) => data)
   .handler(async ({ data }) => {
     const { requireUnlocked, db } = await import("./gate.server");
     const { monthRange, fetchRange, TXN_SELECT } = await import("./ledger.server");
@@ -301,7 +334,7 @@ export const getDayLog = createServerFn({ method: "GET" })
   });
 
 export const getDashboard = createServerFn({ method: "GET" })
-  .inputValidator((data: { year: string; today: string }) => data)
+  .validator((data: { year: string; today: string }) => data)
   .handler(async ({ data }) => {
     const { requireUnlocked } = await import("./gate.server");
     const { yearRange, fetchRange } = await import("./ledger.server");
@@ -312,7 +345,7 @@ export const getDashboard = createServerFn({ method: "GET" })
   });
 
 export const getLedger = createServerFn({ method: "GET" })
-  .inputValidator((data: { start: string; end: string }) => data)
+  .validator((data: { start: string; end: string }) => data)
   .handler(async ({ data }) => {
     const { requireUnlocked } = await import("./gate.server");
     const { fetchRange } = await import("./ledger.server");
@@ -321,7 +354,7 @@ export const getLedger = createServerFn({ method: "GET" })
   });
 
 export const searchLedger = createServerFn({ method: "GET" })
-  .inputValidator((data: { q: string }) => data)
+  .validator((data: { q: string }) => data)
   .handler(async ({ data }) => {
     const { requireUnlocked, db } = await import("./gate.server");
     const { TXN_SELECT } = await import("./ledger.server");
@@ -352,7 +385,7 @@ export const getAuditLog = createServerFn({ method: "GET" }).handler(async () =>
 });
 
 export const saveMaster = createServerFn({ method: "POST" })
-  .inputValidator(
+  .validator(
     (data: { table: "products" | "materials" | "channels" | "customers" | "operators" | "bom_lines"; id?: string | null; values: Record<string, unknown> }) => data,
   )
   .handler(async ({ data }) => {
@@ -373,7 +406,7 @@ export const saveMaster = createServerFn({ method: "POST" })
   });
 
 export const deleteMaster = createServerFn({ method: "POST" })
-  .inputValidator(
+  .validator(
     (data: { table: "products" | "materials" | "channels" | "customers" | "operators" | "bom_lines"; id: string }) => data,
   )
   .handler(async ({ data }) => {

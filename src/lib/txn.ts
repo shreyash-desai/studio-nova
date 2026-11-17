@@ -9,6 +9,7 @@ export type TxnRow = {
   order_number: string | null;
   condition: string | null;
   notes: string | null;
+  reason?: string | null;
   reversal_of: string | null;
   edited: boolean;
   created_at: string;
@@ -19,6 +20,9 @@ export type TxnRow = {
   tick_item_photo: boolean;
   tick_send_tracking: boolean;
   tick_send_invoice: boolean | null;
+  tick_sent?: boolean | null;
+  tick_return?: boolean | null;
+  photo_url?: string | null;
   added_by: string | null;
   unit: string | null;
   unit_price: number | null;
@@ -47,8 +51,45 @@ export const TYPE_SWATCH: Record<string, string> = {
   return: "bg-return",
 };
 
-
 export const CONDITIONS = ["Resellable", "Damaged", "Repairable"];
+
+// The 5 official online marketplace categories
+export const ONLINE_CATEGORIES = ["Amazon", "Pepperfry", "Flipkart", "Claymango", "Website"] as const;
+
+export function isOnlineChannel(channelName?: string | null): boolean {
+  if (!channelName) return false;
+  const clean = channelName.trim().toLowerCase();
+  return (
+    clean === "amazon" ||
+    clean.includes("pepperfry") ||
+    clean === "flipkart" ||
+    clean === "claymango" ||
+    clean === "website"
+  );
+}
+
+export function isCustom3D(row: { product?: { name?: string | null; sku?: string | null } | null } | null | undefined): boolean {
+  if (!row?.product) return false;
+  const name = (row.product.name ?? "").toLowerCase();
+  const sku = (row.product.sku ?? "").toLowerCase();
+  return name.includes("custom 3d") || name.includes("custom-3d") || sku.includes("custom-3d");
+}
+
+export function parseDispatchMeta(row: TxnRow) {
+  let meta: { tick_sent?: boolean; tick_return?: boolean; photo_url?: string | null } = {};
+  if (row.reason && row.reason.startsWith("{") && row.reason.endsWith("}")) {
+    try {
+      meta = JSON.parse(row.reason);
+    } catch {
+      // ignore JSON parse errors
+    }
+  }
+  return {
+    tick_sent: row.tick_sent ?? meta.tick_sent ?? false,
+    tick_return: row.tick_return ?? meta.tick_return ?? false,
+    photo_url: row.photo_url ?? meta.photo_url ?? null,
+  };
+}
 
 export function todayISO() {
   return new Date(Date.now() + 5.5 * 3600 * 1000).toISOString().slice(0, 10);
